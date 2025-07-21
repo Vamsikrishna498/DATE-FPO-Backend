@@ -17,7 +17,7 @@ public class OtpController {
     // Generate and send OTP to the phone number
     @PostMapping("/generate")
     public ResponseEntity<String> generateOtp(@RequestParam String phoneNumber) {
-        String otp = otpService.generateAndSendOtp(phoneNumber);
+        otpService.generateAndSendOtp(phoneNumber);
         return ResponseEntity.ok("OTP sent successfully to " + phoneNumber);
     }
  

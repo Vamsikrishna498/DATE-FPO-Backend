@@ -1,6 +1,6 @@
 package com.farmer.Form.Controller;
 
-import com.farmer.Form.DTO.FarmerDto;
+import com.farmer.Form.DTO.FarmerDTO;
 import com.farmer.Form.DTO.PincodeApiResponse.PostOffice;
 import com.farmer.Form.Service.AddressService;
 import com.farmer.Form.Service.FarmerService;
@@ -30,7 +30,7 @@ public class FarmerController {
 
     // ✅ Create farmer with multipart/form-data
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FarmerDto> createFarmer(
+    public ResponseEntity<FarmerDTO> createFarmer(
             @RequestPart("farmerDto") String farmerDtoJson,
             @RequestPart(value = "photo", required = false) MultipartFile photo,
             @RequestPart(value = "passbookPhoto", required = false) MultipartFile passbookPhoto,
@@ -38,9 +38,9 @@ public class FarmerController {
             @RequestPart(value = "soilTestCertificate", required = false) MultipartFile soilTestCertificate
     ) throws JsonProcessingException {
 
-        FarmerDto farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDto.class);
+        FarmerDTO farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDTO.class);
 
-        FarmerDto createdFarmer = service.createFarmer(
+        FarmerDTO createdFarmer = service.createFarmer(
                 farmerDTO,
                 photo,
                 passbookPhoto,
@@ -53,19 +53,19 @@ public class FarmerController {
 
     // ✅ Get farmer by ID
     @GetMapping("/{id}")
-    public ResponseEntity<FarmerDto> getFarmerById(@PathVariable Long id) {
+    public ResponseEntity<FarmerDTO> getFarmerById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getFarmerById(id));
     }
 
     // ✅ Get all farmers
     @GetMapping
-    public ResponseEntity<List<FarmerDto>> getAllFarmers() {
+    public ResponseEntity<List<FarmerDTO>> getAllFarmers() {
         return ResponseEntity.ok(service.getAllFarmers());
     }
 
     // ✅ Update farmer with optional files
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FarmerDto> updateFarmer(
+    public ResponseEntity<FarmerDTO> updateFarmer(
             @PathVariable Long id,
             @RequestPart("farmerDto") String farmerDtoJson,
             @RequestPart(value = "photo", required = false) MultipartFile photo,
@@ -74,9 +74,9 @@ public class FarmerController {
             @RequestPart(value = "soilTestCertificate", required = false) MultipartFile soilTestCertificate
     ) throws JsonProcessingException {
 
-        FarmerDto farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDto.class);
+        FarmerDTO farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDTO.class);
 
-        FarmerDto updatedFarmer = service.updateFarmer(
+        FarmerDTO updatedFarmer = service.updateFarmer(
                 id,
                 farmerDTO,
                 photo,

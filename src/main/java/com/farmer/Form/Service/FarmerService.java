@@ -3,7 +3,7 @@ package com.farmer.Form.Service;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import com.farmer.Form.DTO.FarmerDto;
+import com.farmer.Form.DTO.FarmerDTO;
 import com.farmer.Form.Entity.Farmer;
 import com.farmer.Form.Repository.FarmerRepository;
 
@@ -11,24 +11,24 @@ import java.util.List;
  
 public interface FarmerService {
  
-    FarmerDto createFarmer(FarmerDto dto,
+    FarmerDTO createFarmer(FarmerDTO dto,
                            MultipartFile photo,
                            MultipartFile passbookPhoto,
                            MultipartFile aadhaar,
                            MultipartFile soilTestCertificate);
  
-    FarmerDto updateFarmer(Long id,
-                           FarmerDto dto,
+    FarmerDTO updateFarmer(Long id,
+                           FarmerDTO dto,
                            MultipartFile photo,
                            MultipartFile passbookPhoto,
                            MultipartFile aadhaar,
                            MultipartFile soilTestCertificate);
  
-    FarmerDto updateFarmer(Long id, FarmerDto dto);
+    FarmerDTO updateFarmer(Long id, FarmerDTO dto);
  
-    FarmerDto getFarmerById(Long id);
+    FarmerDTO getFarmerById(Long id);
  
-    List<FarmerDto> getAllFarmers();
+    List<FarmerDTO> getAllFarmers();
  
     void deleteFarmer(Long id);
  

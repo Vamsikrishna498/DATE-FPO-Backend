@@ -3,7 +3,7 @@ package com.farmer.Form.Controller;
 
 import org.springframework.web.bind.annotation.*;
 
-import com.farmer.Form.DTO.FarmerDto;
+import com.farmer.Form.DTO.FarmerDTO;
 import com.farmer.Form.Service.FarmerService;
 
 import java.util.List;
@@ -26,13 +26,13 @@ public class DashboardController {
  
     // ✅ List of all farmers
     @GetMapping("/farmers")
-    public List<FarmerDto> getAllFarmers() {
+    public List<FarmerDTO> getAllFarmers() {
         return farmerService.getAllFarmers();
     }
  
     // ✅ Single farmer details
     @GetMapping("/farmers/{id}")
-    public FarmerDto getFarmerById(@PathVariable Long id) {
+    public FarmerDTO getFarmerById(@PathVariable Long id) {
         return farmerService.getFarmerById(id);
     }
 }

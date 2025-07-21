@@ -68,16 +68,15 @@ public class EmailService {
         }
         try {
             StringBuilder body = new StringBuilder()
-                    .append("Dear ").append(name != null ? name : "").append(",\n\n")
-                    .append("Thank you for registering with us! ")
-                    .append("Your account has been successfully created.\n\n")
-                    .append("You can now log in and start managing your profile.\n\n")
-                    .append("Regards,\n")
-                    .append("The Farmer Management Team");
- 
+                    .append("Welcome to AgriStack!\n\n")
+                    .append("Hi ").append(name != null ? name : "User").append(",\n\n")
+                    .append("Your registration is complete and currently pending admin approval.\n")
+                    .append("You'll be notified once your account is activated.\n\n")
+                    .append("Regards,\nAgriStack Team");
+
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(to);
-            message.setSubject("Welcome to DigitalAgristack");
+            message.setSubject("Welcome to AgriStack!");
             message.setText(body.toString());
             mailSender.send(message);
             log.info("Registration email sent successfully to {}", to);
@@ -134,6 +133,57 @@ public class EmailService {
             log.info("Password reset confirmation email sent successfully to {}", to);
         } catch (Exception e) {
             log.error("Failed to send password reset confirmation email to {}: {}", to, e.getMessage(), e);
+        }
+    }
+
+    @Async
+    public void sendAccountApprovedEmail(String to, String name, String tempPassword) {
+        if (to == null || to.isEmpty()) {
+            log.error("Recipient email is null or empty");
+            throw new IllegalArgumentException("Recipient email must not be null or empty");
+        }
+        try {
+            StringBuilder body = new StringBuilder()
+                    .append("Hi ").append(name != null ? name : "User").append(",\n\n")
+                    .append("Your account has been approved and is now active!\n")
+                    .append("You can log in using the following credentials:\n")
+                    .append("Email: ").append(to).append("\n")
+                    .append("Temporary Password: ").append(tempPassword).append("\n\n")
+                    .append("Please change your password after your first login for security.\n\n")
+                    .append("Regards,\nAgriStack Team");
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject("Your AgriStack Account is Approved!");
+            message.setText(body.toString());
+            mailSender.send(message);
+            log.info("Account approval email sent successfully to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send account approval email to {}: {}", to, e.getMessage(), e);
+        }
+    }
+
+    @Async
+    public void sendAccountRejectedEmail(String to, String name) {
+        if (to == null || to.isEmpty()) {
+            log.error("Recipient email is null or empty");
+            throw new IllegalArgumentException("Recipient email must not be null or empty");
+        }
+        try {
+            StringBuilder body = new StringBuilder()
+                    .append("Hi ").append(name != null ? name : "User").append(",\n\n")
+                    .append("We regret to inform you that your registration request has been rejected after review.\n")
+                    .append("If you believe this is a mistake or need more information, please contact support.\n\n")
+                    .append("Regards,\nAgriStack Team");
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject("Your AgriStack Account Registration Status");
+            message.setText(body.toString());
+            mailSender.send(message);
+            log.info("Account rejection email sent successfully to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send account rejection email to {}: {}", to, e.getMessage(), e);
         }
     }
 }

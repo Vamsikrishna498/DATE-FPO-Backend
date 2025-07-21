@@ -161,6 +161,10 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + id));
         user.setStatus(com.farmer.Form.Entity.UserStatus.valueOf(newStatus.toUpperCase()));
         userRepository.save(user);
+        // Send rejection email if status is REJECTED
+        if ("REJECTED".equalsIgnoreCase(newStatus)) {
+            emailService.sendAccountRejectedEmail(user.getEmail(), user.getFirstName());
+        }
     }
 
     // ✅ Approve user and assign role (Super Admin)
@@ -176,18 +180,10 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(tempPassword));
         user.setForcePasswordChange(true);
         userRepository.save(user);
+        log.info("Attempting to send approval email to {}", user.getEmail());
         try {
-            String subject = "Account Approved - Please Change Your Password";
-            String body = "Dear " + user.getFirstName() + ",\n\n" +
-                    "Your account has been approved. Please login with the following credentials and change your password on first login.\n" +
-                    "Username: " + user.getEmail() + "\n" +
-                    "Temporary Password: " + tempPassword + "\n\n" +
-                    "Regards,\nAdmin Team";
-            emailService.sendEmail(EmailServiceDTO.builder()
-                    .to(user.getEmail())
-                    .subject(subject)
-                    .body(body)
-                    .build());
+            emailService.sendAccountApprovedEmail(user.getEmail(), user.getFirstName(), tempPassword);
+            log.info("Approval email sent to {}", user.getEmail());
         } catch (Exception e) {
             log.error("Failed to send approval email: {}", e.getMessage());
         }

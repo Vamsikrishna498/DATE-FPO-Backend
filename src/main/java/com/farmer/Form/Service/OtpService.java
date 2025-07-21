@@ -108,6 +108,14 @@ public class OtpService {
         otpStore.remove(normalize(rawEmail));
     }
  
+    /**
+     * Compatibility method for OtpController: verifies OTP for a phone number.
+     * Delegates to verifyOtp(String, String).
+     */
+    public boolean verifyOtpCode(String phoneNumber, String otp) {
+        return verifyOtp(phoneNumber, otp);
+    }
+ 
     // ───── Helpers ─────
  
     private String normalize(String email) {

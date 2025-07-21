@@ -1,14 +1,14 @@
 package com.farmer.Form.Mapper;
 
-import com.farmer.Form.DTO.FarmerDto;
+import com.farmer.Form.DTO.FarmerDTO;
 import com.farmer.Form.Entity.Farmer;
 
 public class FarmerMapper {
 
-    public static FarmerDto toDto(Farmer farmer) {
+    public static FarmerDTO toDto(Farmer farmer) {
         if (farmer == null) return null;
 
-        return FarmerDto.builder()
+        return FarmerDTO.builder()
                 .id(farmer.getId())
                 .photoFileName(farmer.getPhotoFileName())
                 .passbookFileName(farmer.getPassbookFileName())
@@ -67,7 +67,7 @@ public class FarmerMapper {
                 .build();
     }
 
-    public static Farmer toEntity(FarmerDto dto, String photoFileName, String passbookFileName, String documentFileName, String soilTestCertificateFileName) {
+    public static Farmer toEntity(FarmerDTO dto, String photoFileName, String passbookFileName, String documentFileName, String soilTestCertificateFileName) {
         if (dto == null) return null;
 
         return Farmer.builder()

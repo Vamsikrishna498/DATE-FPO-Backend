@@ -22,6 +22,7 @@ import com.farmer.Form.Service.EmailService;
 import com.farmer.Form.Service.OtpService;
 import com.farmer.Form.Service.UserService;
 import com.farmer.Form.security.JwtUtil;
+import com.farmer.Form.exception.UserNotApprovedException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,10 @@ public class AuthController {
             response.put("token", token);
             response.put("message", "Login successful");
             return ResponseEntity.ok(response);
+        } catch (UserNotApprovedException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "Your account is not yet approved by admin.");
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body(error);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("message", "Login failed: " + e.getMessage());

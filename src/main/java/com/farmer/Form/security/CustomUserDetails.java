@@ -8,6 +8,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
  
 import com.farmer.Form.Entity.User;
+import com.farmer.Form.Entity.UserStatus;
  
 import lombok.AllArgsConstructor;
  
@@ -54,7 +55,8 @@ public class CustomUserDetails implements UserDetails {
  
     @Override
     public boolean isEnabled() {
-        return true;
+        // Only allow login if user status is APPROVED
+        return user.getStatus() == UserStatus.APPROVED;
     }
 }
  

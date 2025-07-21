@@ -1,6 +1,6 @@
 package com.farmer.Form.Service.Impl;
 
-import com.farmer.Form.DTO.FarmerDto;
+import com.farmer.Form.DTO.FarmerDTO;
 import com.farmer.Form.Entity.Farmer;
 import com.farmer.Form.Mapper.FarmerMapper;
 import com.farmer.Form.Repository.FarmerRepository;
@@ -27,7 +27,7 @@ public class FarmerServiceImpl implements FarmerService {
     private com.farmer.Form.Repository.EmployeeRepository employeeRepository;
 
     @Override
-    public FarmerDto createFarmer(FarmerDto dto, MultipartFile photo, MultipartFile passbookPhoto,
+    public FarmerDTO createFarmer(FarmerDTO dto, MultipartFile photo, MultipartFile passbookPhoto,
                                   MultipartFile aadhaar, MultipartFile soilTestCertificate) {
         try {
             String photoFile = (photo != null && !photo.isEmpty())
@@ -49,21 +49,21 @@ public class FarmerServiceImpl implements FarmerService {
     }
 
     @Override
-    public FarmerDto getFarmerById(Long id) {
+    public FarmerDTO getFarmerById(Long id) {
         return farmerRepository.findById(id)
                 .map(FarmerMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Farmer not found"));
     }
 
     @Override
-    public List<FarmerDto> getAllFarmers() {
+    public List<FarmerDTO> getAllFarmers() {
         return farmerRepository.findAll().stream()
                 .map(FarmerMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public FarmerDto updateFarmer(Long id, FarmerDto dto,
+    public FarmerDTO updateFarmer(Long id, FarmerDTO dto,
                                   MultipartFile photo, MultipartFile passbookPhoto,
                                   MultipartFile aadhaar, MultipartFile soilTestCertificate) {
 
@@ -99,7 +99,7 @@ public class FarmerServiceImpl implements FarmerService {
     }
 
     @Override
-    public FarmerDto updateFarmer(Long id, FarmerDto dto) {
+    public FarmerDTO updateFarmer(Long id, FarmerDTO dto) {
         Farmer existing = farmerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Farmer not found"));
 
