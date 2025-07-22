@@ -53,6 +53,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("message", "Login successful");
+            response.put("forcePasswordChange", user.isForcePasswordChange()); // <-- Add this line
             return ResponseEntity.ok(response);
         } catch (UserNotApprovedException e) {
             Map<String, Object> error = new HashMap<>();

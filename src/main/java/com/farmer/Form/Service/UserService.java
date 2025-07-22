@@ -95,7 +95,9 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found with email or phone: " + emailOrPhone));
  
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.setForcePasswordChange(false); // Ensure flag is reset after password change
         userRepository.save(user);
+        log.info("After password reset: user={}, forcePasswordChange={}", user.getEmail(), user.isForcePasswordChange());
  
         try {
             String subject = "Password Reset Confirmation";
