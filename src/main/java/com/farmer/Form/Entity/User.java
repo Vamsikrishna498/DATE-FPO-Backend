@@ -2,7 +2,6 @@ package com.farmer.Form.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDate;
 
 @Entity
@@ -13,16 +12,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private String firstName;
-
-    @Column(nullable = false)
-    private String lastName;
+    private String name;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -30,23 +25,14 @@ public class User {
     @Column(unique = true, nullable = false)
     private String phoneNumber;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(nullable = true)
+    private String password; // Set only when approved
 
     @Column(nullable = false)
     private LocalDate dateOfBirth;
 
     @Column(nullable = false)
     private String gender;
-
-    @Column(nullable = false)
-    private String country;
-
-    @Column(nullable = false)
-    private String state;
-
-    @Column(nullable = false)
-    private String pinCode;
 
     @Enumerated(EnumType.STRING)
     private Role role;

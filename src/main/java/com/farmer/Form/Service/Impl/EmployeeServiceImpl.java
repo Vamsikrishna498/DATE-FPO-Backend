@@ -108,5 +108,10 @@ public class EmployeeServiceImpl implements EmployeeService {
     public void deleteEmployeeBySuperAdmin(Long id) {
         repository.deleteById(id);
     }
+
+    @Override
+    public Employee getEmployeeByEmail(String email) {
+        return repository.findByEmail(email).orElse(null);
+    }
 }
  

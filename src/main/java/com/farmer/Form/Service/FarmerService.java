@@ -48,5 +48,10 @@ public interface FarmerService {
 
     List<Farmer> getFarmersByEmployeeEmail(String email);
     void approveKyc(Long farmerId);
+    
+    // Enhanced KYC Management Methods
+    void approveKycByEmployee(Long farmerId, String employeeEmail);
+    void referBackKyc(Long farmerId, String employeeEmail, String reason);
+    void rejectKyc(Long farmerId, String employeeEmail, String reason);
 }
  

@@ -19,6 +19,7 @@ import com.farmer.Form.exception.UserNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.farmer.Form.Entity.Role;
  
 @Service
 @RequiredArgsConstructor
@@ -57,7 +58,47 @@ public class UserService {
         otpService.clearEmailVerification(userDTO.getEmail());
  
         try {
-            emailService.sendRegistrationEmail(savedUser.getEmail(), savedUser.getFirstName());
+            emailService.sendRegistrationEmail(savedUser.getEmail(), savedUser.getName());
+        } catch (Exception e) {
+            log.error("Failed to send welcome email: {}", e.getMessage());
+        }
+ 
+        return savedUser;
+    }
+
+    // ✅ Register a new user with role (for Employee and Farmer registrations)
+    public User registerUserWithRole(UserDTO userDTO) {
+        log.info("Registering user with role: {} and email: {}", userDTO.getRole(), userDTO.getEmail());
+ 
+        userRepository.findByEmail(userDTO.getEmail()).ifPresent(user -> {
+            log.warn("Email already registered: {}", userDTO.getEmail());
+            throw new UserAlreadyExistsException("Email already registered: " + userDTO.getEmail());
+        });
+ 
+        User user = userMapper.toEntity(userDTO);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        // Set role from DTO (convert to enum)
+        Role role = com.farmer.Form.Entity.Role.valueOf(userDTO.getRole().toUpperCase());
+        user.setRole(role);
+        user.setStatus(com.farmer.Form.Entity.UserStatus.PENDING);
+        user.setForcePasswordChange(false);
+        
+        // Handle optional fields with default values
+        if (user.getName() == null || user.getName().trim().isEmpty()) {
+            user.setName("Not Provided");
+        }
+        if (user.getPhoneNumber() == null || user.getPhoneNumber().trim().isEmpty()) {
+            user.setPhoneNumber("Not Provided");
+        }
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            user.setEmail("Not Provided");
+        }
+ 
+        User savedUser = userRepository.save(user);
+ 
+        try {
+            emailService.sendRegistrationEmail(savedUser.getEmail(), savedUser.getName());
         } catch (Exception e) {
             log.error("Failed to send welcome email: {}", e.getMessage());
         }
@@ -101,7 +142,7 @@ public class UserService {
  
         try {
             String subject = "Password Reset Confirmation";
-            String body = "Dear " + user.getFirstName() + ",\n\n"
+            String body = "Dear " + user.getName() + ",\n\n"
                     + "Your password has been successfully reset.\n"
                     + "If this was not you, please contact support immediately.\n\n"
                     + "Regards,\nFarmer Management Team";
@@ -165,7 +206,7 @@ public class UserService {
         userRepository.save(user);
         // Send rejection email if status is REJECTED
         if ("REJECTED".equalsIgnoreCase(newStatus)) {
-            emailService.sendAccountRejectedEmail(user.getEmail(), user.getFirstName());
+            emailService.sendAccountRejectedEmail(user.getEmail(), user.getName());
         }
     }
 
@@ -184,7 +225,7 @@ public class UserService {
         userRepository.save(user);
         log.info("Attempting to send approval email to {}", user.getEmail());
         try {
-            emailService.sendAccountApprovedEmail(user.getEmail(), user.getFirstName(), tempPassword);
+            emailService.sendAccountApprovedEmail(user.getEmail(), user.getName(), tempPassword);
             log.info("Approval email sent to {}", user.getEmail());
         } catch (Exception e) {
             log.error("Failed to send approval email: {}", e.getMessage());
@@ -212,7 +253,7 @@ public class UserService {
         userRepository.save(user);
         try {
             String subject = "Password Reset Confirmation";
-            String body = "Dear " + user.getFirstName() + ",\n\n"
+            String body = "Dear " + user.getName() + ",\n\n"
                     + "Your password has been successfully reset.\n"
                     + "If this was not you, please contact support immediately.\n\n"
                     + "Regards,\nFarmer Management Team";
@@ -243,10 +284,12 @@ public class UserService {
 
     public User updateUserBySuperAdmin(Long id, User updatedUser) {
         User user = getUserRawById(id);
-        user.setFirstName(updatedUser.getFirstName());
-        user.setLastName(updatedUser.getLastName());
-        user.setEmail(updatedUser.getEmail());
+        user.setName(updatedUser.getName());
         user.setPhoneNumber(updatedUser.getPhoneNumber());
+        user.setEmail(updatedUser.getEmail());
+        user.setRole(updatedUser.getRole());
+        user.setStatus(updatedUser.getStatus());
+        user.setForcePasswordChange(updatedUser.isForcePasswordChange());
         // ... update other fields as needed
         return userRepository.save(user);
     }
@@ -261,6 +304,20 @@ public class UserService {
 
     public List<User> getApprovedUsersRaw() {
         return userRepository.findByStatus(com.farmer.Form.Entity.UserStatus.APPROVED);
+    }
+
+    public List<User> getRejectedUsersRaw() {
+        return userRepository.findByStatus(com.farmer.Form.Entity.UserStatus.REJECTED);
+    }
+
+    // ✅ Get users by role (raw format)
+    public List<User> getUsersByRoleRaw(Role role) {
+        return userRepository.findByRole(role);
+    }
+
+    // ✅ Get pending users by role (raw format)
+    public List<User> getPendingUsersByRoleRaw(Role role) {
+        return userRepository.findByRoleAndStatus(role, com.farmer.Form.Entity.UserStatus.PENDING);
     }
 
     public void resendOtp(String email) {

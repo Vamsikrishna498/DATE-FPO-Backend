@@ -25,16 +25,12 @@ public class FormApplication {
 			String superAdminEmail = "projecthinfintiy@12.in";
 			if (userRepository.findByEmail(superAdminEmail).isEmpty()) {
 				User superAdmin = User.builder()
-						.firstName("Super")
-						.lastName("Admin")
+						.name("Super")
 						.email(superAdminEmail)
 						.phoneNumber("9999999999")
 						.password(passwordEncoder.encode("Password123@"))
 						.dateOfBirth(LocalDate.of(1990, 1, 1))
 						.gender("Other")
-						.country("India")
-						.state("Telangana")
-						.pinCode("500001")
 						.role(Role.SUPER_ADMIN)
 						.status(UserStatus.APPROVED)
 						.forcePasswordChange(false)

@@ -44,8 +44,8 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // 🔓 TEMPORARILY ALLOW ALL REQUESTS FOR TESTING
-                .anyRequest().permitAll()
+                .requestMatchers("/api/**").permitAll() // Allow all /api endpoints
+                .anyRequest().authenticated()
             );
             // .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

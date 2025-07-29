@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Delete User API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .endpoint {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .delete-btn {
+            background: #dc3545;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Delete User API</h1>
+    <p>This page tests the delete user functionality for super admin. Make sure your Spring Boot server is running on port 8080.</p>
+
+    <div class="test-section">
+        <h2>1. Get All Users (Registration List)</h2>
+        <div class="endpoint">GET /api/super-admin/registration-list</div>
+        <button onclick="getAllUsers()">Get All Users</button>
+        <div id="users-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Delete Single User</h2>
+        <div class="endpoint">DELETE /api/super-admin/users/{id}</div>
+        <input type="number" id="deleteUserId" placeholder="Enter User ID to delete" />
+        <button onclick="deleteUser()" class="delete-btn">Delete User</button>
+        <div id="delete-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Bulk Delete Users</h2>
+        <div class="endpoint">DELETE /api/super-admin/users/bulk</div>
+        <input type="text" id="bulkDeleteIds" placeholder="Enter User IDs separated by commas (e.g., 1,2,3)" />
+        <button onclick="bulkDeleteUsers()" class="delete-btn">Bulk Delete</button>
+        <div id="bulk-delete-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Filter Users by Status</h2>
+        <div class="endpoint">GET /api/super-admin/registration-list/filter?status={status}</div>
+        <select id="statusFilter">
+            <option value="ALL">All</option>
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+        </select>
+        <button onclick="filterUsers()">Filter Users</button>
+        <div id="filter-response" class="response"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8080';
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${BASE_URL}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return { success: true, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function displayResponse(elementId, result) {
+            const element = document.getElementById(elementId);
+            if (result.success) {
+                element.innerHTML = `<span class="success">✅ Success!</span>\n${JSON.stringify(result.data, null, 2)}`;
+            } else {
+                element.innerHTML = `<span class="error">❌ Error: ${result.error}</span>`;
+            }
+        }
+
+        async function getAllUsers() {
+            const element = document.getElementById('users-response');
+            element.innerHTML = '<span class="loading">Loading...</span>';
+            
+            const result = await makeRequest('/api/super-admin/registration-list');
+            displayResponse('users-response', result);
+        }
+
+        async function deleteUser() {
+            const userId = document.getElementById('deleteUserId').value;
+            if (!userId) {
+                alert('Please enter a User ID');
+                return;
+            }
+
+            const element = document.getElementById('delete-response');
+            element.innerHTML = '<span class="loading">Deleting user...</span>';
+            
+            const result = await makeRequest(`/api/super-admin/users/${userId}`, {
+                method: 'DELETE'
+            });
+            displayResponse('delete-response', result);
+        }
+
+        async function bulkDeleteUsers() {
+            const userIdsText = document.getElementById('bulkDeleteIds').value;
+            if (!userIdsText) {
+                alert('Please enter User IDs');
+                return;
+            }
+
+            const userIds = userIdsText.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            if (userIds.length === 0) {
+                alert('Please enter valid User IDs');
+                return;
+            }
+
+            const element = document.getElementById('bulk-delete-response');
+            element.innerHTML = '<span class="loading">Deleting users...</span>';
+            
+            const result = await makeRequest('/api/super-admin/users/bulk', {
+                method: 'DELETE',
+                body: JSON.stringify(userIds)
+            });
+            displayResponse('bulk-delete-response', result);
+        }
+
+        async function filterUsers() {
+            const status = document.getElementById('statusFilter').value;
+            const element = document.getElementById('filter-response');
+            element.innerHTML = '<span class="loading">Filtering users...</span>';
+            
+            const result = await makeRequest(`/api/super-admin/registration-list/filter?status=${status}`);
+            displayResponse('filter-response', result);
+        }
+
+        // Auto-load users on page load
+        window.onload = function() {
+            console.log('Delete User API Test Page Loaded');
+            console.log('Make sure your Spring Boot server is running on port 8080');
+            getAllUsers();
+        };
+    </script>
+</body>
+</html> 

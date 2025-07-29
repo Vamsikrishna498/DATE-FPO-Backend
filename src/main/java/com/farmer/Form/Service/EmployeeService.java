@@ -23,5 +23,8 @@ public interface EmployeeService {
     Employee createEmployeeBySuperAdmin(Employee employee);
     Employee updateEmployeeBySuperAdmin(Long id, Employee employee);
     void deleteEmployeeBySuperAdmin(Long id);
+    
+    // Get employee by email
+    Employee getEmployeeByEmail(String email);
 }
  

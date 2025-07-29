@@ -5,5 +5,5 @@ public enum Role {
     ADMIN,
     EMPLOYEE,
     FARMER,
-    FPO // F.P.O (Farmer Producer Organization)
+    FPO // Optional for future use
 } 

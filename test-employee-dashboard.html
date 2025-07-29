@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .endpoint {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Employee Dashboard API Test</h1>
+    <p>This page tests the employee dashboard backend endpoints. Make sure your Spring Boot server is running on port 8080.</p>
+
+    <div class="test-section">
+        <h2>1. Dashboard Statistics</h2>
+        <div class="endpoint">GET /api/employees/dashboard/stats</div>
+        <button onclick="testDashboardStats()">Test Dashboard Stats</button>
+        <div id="stats-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Assigned Farmers with KYC Status</h2>
+        <div class="endpoint">GET /api/employees/dashboard/assigned-farmers</div>
+        <button onclick="testAssignedFarmers()">Test Assigned Farmers</button>
+        <div id="farmers-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. To-Do List</h2>
+        <div class="endpoint">GET /api/employees/dashboard/todo-list</div>
+        <button onclick="testTodoList()">Test To-Do List</button>
+        <div id="todo-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Employee Profile</h2>
+        <div class="endpoint">GET /api/employees/dashboard/profile</div>
+        <button onclick="testEmployeeProfile()">Test Employee Profile</button>
+        <div id="profile-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Filter Farmers by KYC Status</h2>
+        <div class="endpoint">GET /api/employees/dashboard/farmers/filter?kycStatus=PENDING</div>
+        <button onclick="testFilterFarmers('PENDING')">Filter Pending</button>
+        <button onclick="testFilterFarmers('APPROVED')">Filter Approved</button>
+        <button onclick="testFilterFarmers('REFER_BACK')">Filter Refer Back</button>
+        <button onclick="testFilterFarmers('REJECTED')">Filter Rejected</button>
+        <div id="filter-response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Test All Endpoints</h2>
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+        <div id="all-response" class="response"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8080';
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${BASE_URL}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return { success: true, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function displayResponse(elementId, result) {
+            const element = document.getElementById(elementId);
+            if (result.success) {
+                element.innerHTML = `<span class="success">✅ Success!</span>\n${JSON.stringify(result.data, null, 2)}`;
+            } else {
+                element.innerHTML = `<span class="error">❌ Error: ${result.error}</span>`;
+            }
+        }
+
+        async function testDashboardStats() {
+            const element = document.getElementById('stats-response');
+            element.innerHTML = '<span class="loading">Loading...</span>';
+            
+            const result = await makeRequest('/api/employees/dashboard/stats');
+            displayResponse('stats-response', result);
+        }
+
+        async function testAssignedFarmers() {
+            const element = document.getElementById('farmers-response');
+            element.innerHTML = '<span class="loading">Loading...</span>';
+            
+            const result = await makeRequest('/api/employees/dashboard/assigned-farmers');
+            displayResponse('farmers-response', result);
+        }
+
+        async function testTodoList() {
+            const element = document.getElementById('todo-response');
+            element.innerHTML = '<span class="loading">Loading...</span>';
+            
+            const result = await makeRequest('/api/employees/dashboard/todo-list');
+            displayResponse('todo-response', result);
+        }
+
+        async function testEmployeeProfile() {
+            const element = document.getElementById('profile-response');
+            element.innerHTML = '<span class="loading">Loading...</span>';
+            
+            const result = await makeRequest('/api/employees/dashboard/profile');
+            displayResponse('profile-response', result);
+        }
+
+        async function testFilterFarmers(kycStatus) {
+            const element = document.getElementById('filter-response');
+            element.innerHTML = '<span class="loading">Loading...</span>';
+            
+            const result = await makeRequest(`/api/employees/dashboard/farmers/filter?kycStatus=${kycStatus}`);
+            displayResponse('filter-response', result);
+        }
+
+        async function testAllEndpoints() {
+            const element = document.getElementById('all-response');
+            element.innerHTML = '<span class="loading">Testing all endpoints...</span>';
+            
+            const endpoints = [
+                { name: 'Dashboard Stats', url: '/api/employees/dashboard/stats' },
+                { name: 'Assigned Farmers', url: '/api/employees/dashboard/assigned-farmers' },
+                { name: 'To-Do List', url: '/api/employees/dashboard/todo-list' },
+                { name: 'Employee Profile', url: '/api/employees/dashboard/profile' }
+            ];
+
+            let results = [];
+            
+            for (const endpoint of endpoints) {
+                const result = await makeRequest(endpoint.url);
+                results.push({
+                    endpoint: endpoint.name,
+                    success: result.success,
+                    error: result.error || 'Success'
+                });
+            }
+
+            const summary = results.map(r => 
+                `${r.success ? '✅' : '❌'} ${r.endpoint}: ${r.error}`
+            ).join('\n');
+
+            element.innerHTML = `<span class="success">Test Results:</span>\n${summary}`;
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            console.log('Employee Dashboard API Test Page Loaded');
+            console.log('Make sure your Spring Boot server is running on port 8080');
+        };
+    </script>
+</body>
+</html> 

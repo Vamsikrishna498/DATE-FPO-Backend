@@ -6,43 +6,24 @@ import lombok.Data;
 @Data
 public class UserRegistrationDTO {
  
-    @NotBlank(message = "First name is required")
-    @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
-    private String firstName;
+    @NotBlank(message = "Name is required.")
+    private String name;
  
-    @NotBlank(message = "Last name is required")
-    @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
-    private String lastName;
- 
-    @NotBlank(message = "Date of birth is required")
-    private String dateOfBirth;  // You can use LocalDate if needed
- 
-    @NotBlank(message = "Gender is required")
-    private String gender;
- 
-    @NotBlank(message = "Country/Region is required")
-    private String country;
- 
-    @NotBlank(message = "State is required")
-    private String state;
- 
-    @NotBlank(message = "Pin Code is required")
-    @Pattern(regexp = "^[1-9][0-9]{5}$", message = "Invalid Pin Code")
-    private String pinCode;
- 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
-    private String email;
- 
-    @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid phone number")
+    @NotBlank(message = "Phone number is required.")
+    @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be 10 digits.")
     private String phoneNumber;
  
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters long")
-    private String password;
+    @NotBlank(message = "Gender is required.")
+    private String gender;
  
-    @NotBlank(message = "Confirm password is required")
-    private String confirmPassword;
+    @NotBlank(message = "Role is required.")
+    private String role;
+ 
+    @NotBlank(message = "Date of birth is required.")
+    private String dateOfBirth; // Format: YYYY-MM-DD
+ 
+    @NotBlank(message = "Email is required.")
+    @Email(message = "Invalid email format.")
+    private String email;
 }
  

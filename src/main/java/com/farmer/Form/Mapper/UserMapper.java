@@ -63,27 +63,10 @@ public interface UserMapper {
     }
 
     // Mapping DTO to Entity (for registration)
-    @Mappings({
-        @Mapping(target = "id", ignore = true),
-        @Mapping(target = "role", ignore = true), // Role is set in service
-        @Mapping(target = "status", ignore = true),
-        @Mapping(target = "dateOfBirth", source = "dateOfBirth", qualifiedByName = "stringToLocalDate")
-    })
+    @Mapping(target = "dateOfBirth", source = "dateOfBirth", qualifiedByName = "stringToLocalDate")
     User toEntity(UserDTO dto);
 
     // Mapping Entity to View DTO
-    @Mappings({
-        @Mapping(target = "firstName", source = "firstName"),
-        @Mapping(target = "lastName", source = "lastName"),
-        @Mapping(target = "email", source = "email"),
-        @Mapping(target = "mobileNumber", source = "phoneNumber"),
-        @Mapping(target = "dateOfBirth", source = "dateOfBirth", qualifiedByName = "localDateToString"),
-        @Mapping(target = "gender", source = "gender"),
-        @Mapping(target = "country", source = "country"),
-        @Mapping(target = "state", source = "state"),
-        @Mapping(target = "pinCode", source = "pinCode"),
-        @Mapping(target = "role", source = "role", qualifiedByName = "roleToString"),
-        @Mapping(target = "status", source = "status", qualifiedByName = "statusToString")
-    })
+    @Mapping(target = "dateOfBirth", source = "dateOfBirth", qualifiedByName = "localDateToString")
     UserViewDTO toViewDto(User user);
 }

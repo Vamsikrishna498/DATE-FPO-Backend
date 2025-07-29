@@ -16,6 +16,7 @@ import com.farmer.Form.DTO.ResetPasswordDTO;
 import com.farmer.Form.DTO.UserDTO;
 import com.farmer.Form.DTO.UserResponseDTO;
 import com.farmer.Form.DTO.UserViewDTO;
+import com.farmer.Form.DTO.UserRegistrationDTO;
 import com.farmer.Form.Entity.User;
 import com.farmer.Form.Service.CountryStateCityService;
 import com.farmer.Form.Service.EmailService;
@@ -53,7 +54,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("message", "Login successful");
-            response.put("forcePasswordChange", user.isForcePasswordChange()); // <-- Add this line
+            response.put("forcePasswordChange", user.isForcePasswordChange());
             return ResponseEntity.ok(response);
         } catch (UserNotApprovedException e) {
             Map<String, Object> error = new HashMap<>();
@@ -73,6 +74,68 @@ public class AuthController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Registration successful - waiting for approval");
         return ResponseEntity.ok(response);
+    }
+
+    // ✅ REGISTER WITH ROLE (for Employee and Farmer registrations)
+    @PostMapping("/register-with-role")
+    public ResponseEntity<Map<String, String>> registerUserWithRole(@Valid @RequestBody UserDTO userDTO) {
+        // Validate that only EMPLOYEE or FARMER roles are allowed for this endpoint
+        String role = userDTO.getRole().toUpperCase();
+        if (!role.equals("EMPLOYEE") && !role.equals("FARMER")) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Only EMPLOYEE and FARMER roles are allowed for this registration endpoint");
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        userService.registerUserWithRole(userDTO);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Registration successful - waiting for approval");
+        return ResponseEntity.ok(response);
+    }
+
+    // ✅ Simplified registration for role-based registration
+    @PostMapping("/register-simple")
+    public ResponseEntity<Map<String, String>> registerUserSimple(@Valid @RequestBody UserRegistrationDTO userDTO) {
+        // Validate that only EMPLOYEE or FARMER roles are allowed for this endpoint
+        String role = userDTO.getRole().toUpperCase();
+        if (!role.equals("EMPLOYEE") && !role.equals("FARMER")) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Only EMPLOYEE and FARMER roles are allowed for this registration endpoint");
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        // Convert UserRegistrationDTO to UserDTO
+        UserDTO userDTOConverted = new UserDTO();
+        userDTOConverted.setName(userDTO.getName());
+        userDTOConverted.setEmail(userDTO.getEmail());
+        userDTOConverted.setPhoneNumber(userDTO.getPhoneNumber());
+        userDTOConverted.setDateOfBirth(userDTO.getDateOfBirth());
+        userDTOConverted.setGender(userDTO.getGender());
+        userDTOConverted.setRole(userDTO.getRole());
+        
+        userService.registerUserWithRole(userDTOConverted);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Registration successful - waiting for approval");
+        return ResponseEntity.ok(response);
+    }
+
+    // ✅ Simple Captcha endpoint
+    @GetMapping("/captcha")
+    public ResponseEntity<Map<String, String>> generateCaptcha() {
+        // Generate a simple 6-character captcha
+        String captcha = generateSimpleCaptcha();
+        Map<String, String> response = new HashMap<>();
+        response.put("captcha", captcha);
+        return ResponseEntity.ok(response);
+    }
+
+    private String generateSimpleCaptcha() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder captcha = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
+            captcha.append(chars.charAt((int) (Math.random() * chars.length())));
+        }
+        return captcha.toString();
     }
 
     // ✅ SEND OTP

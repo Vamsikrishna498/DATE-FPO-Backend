@@ -94,5 +94,24 @@ public class Farmer {
     @ManyToOne
     private Employee assignedEmployee;
 
+    // Enhanced KYC Management
     private Boolean kycApproved;
+    
+    // New KYC fields for detailed status management
+    @Enumerated(EnumType.STRING)
+    private KycStatus kycStatus = KycStatus.PENDING;
+    
+    private String kycRejectionReason;
+    private String kycReferBackReason;
+    private LocalDate kycSubmittedDate;
+    private LocalDate kycReviewedDate;
+    private String kycReviewedBy;
+    
+    // KYC Status Enum
+    public enum KycStatus {
+        PENDING,        // Not yet reviewed
+        APPROVED,       // KYC approved
+        REJECTED,       // KYC rejected
+        REFER_BACK      // KYC referred back for more info
+    }
 }

@@ -1,35 +1,33 @@
 package com.farmer.Form.DTO;
 
-import java.time.LocalDate;
-
-import com.farmer.Form.Entity.User; // ✅ This must be your own entity
-
-
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
- 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+import lombok.Data;
+
+@Data
 @Builder
 public class UserResponseDTO {
     private Long id;
-    private String firstName;
-    private String lastName;
-    private String email;
+    private String name;
     private String phoneNumber;
-    private LocalDate dateOfBirth;
     private String gender;
-    private String token;
- 
-    public static UserResponseDTO fromEntity(User user, String token) {
-        return UserResponseDTO.builder().id(user.getId()).firstName(user.getFirstName()).lastName(user.getLastName())
-                .email(user.getEmail()).phoneNumber(user.getPhoneNumber()).dateOfBirth(user.getDateOfBirth())
-                .gender(user.getGender()).token(token).build();
+    private String role;
+    private String dateOfBirth;
+    private String email;
+    private String status;
+    private boolean forcePasswordChange;
+
+    public static UserResponseDTO fromEntity(com.farmer.Form.Entity.User user) {
+        return UserResponseDTO.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .phoneNumber(user.getPhoneNumber())
+                .gender(user.getGender())
+                .role(user.getRole().name())
+                .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth().toString() : null)
+                .email(user.getEmail())
+                .status(user.getStatus() != null ? user.getStatus().name() : null)
+                .forcePasswordChange(user.isForcePasswordChange())
+                .build();
     }
 }
  

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -184,6 +185,67 @@ public class FarmerServiceImpl implements FarmerService {
         Farmer farmer = farmerRepository.findById(farmerId)
             .orElseThrow(() -> new RuntimeException("Farmer not found"));
         farmer.setKycApproved(true);
+        farmerRepository.save(farmer);
+    }
+    
+    // Enhanced KYC Management Methods
+    @Override
+    public void approveKycByEmployee(Long farmerId, String employeeEmail) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        
+        // Verify the farmer is assigned to this employee
+        if (farmer.getAssignedEmployee() == null || !farmer.getAssignedEmployee().getEmail().equals(employeeEmail)) {
+            throw new RuntimeException("Farmer is not assigned to this employee");
+        }
+        
+        farmer.setKycStatus(Farmer.KycStatus.APPROVED);
+        farmer.setKycApproved(true);
+        farmer.setKycReviewedDate(LocalDate.now());
+        farmer.setKycReviewedBy(employeeEmail);
+        farmer.setKycRejectionReason(null);
+        farmer.setKycReferBackReason(null);
+        
+        farmerRepository.save(farmer);
+    }
+    
+    @Override
+    public void referBackKyc(Long farmerId, String employeeEmail, String reason) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        
+        // Verify the farmer is assigned to this employee
+        if (farmer.getAssignedEmployee() == null || !farmer.getAssignedEmployee().getEmail().equals(employeeEmail)) {
+            throw new RuntimeException("Farmer is not assigned to this employee");
+        }
+        
+        farmer.setKycStatus(Farmer.KycStatus.REFER_BACK);
+        farmer.setKycApproved(false);
+        farmer.setKycReviewedDate(LocalDate.now());
+        farmer.setKycReviewedBy(employeeEmail);
+        farmer.setKycReferBackReason(reason);
+        farmer.setKycRejectionReason(null);
+        
+        farmerRepository.save(farmer);
+    }
+    
+    @Override
+    public void rejectKyc(Long farmerId, String employeeEmail, String reason) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        
+        // Verify the farmer is assigned to this employee
+        if (farmer.getAssignedEmployee() == null || !farmer.getAssignedEmployee().getEmail().equals(employeeEmail)) {
+            throw new RuntimeException("Farmer is not assigned to this employee");
+        }
+        
+        farmer.setKycStatus(Farmer.KycStatus.REJECTED);
+        farmer.setKycApproved(false);
+        farmer.setKycReviewedDate(LocalDate.now());
+        farmer.setKycReviewedBy(employeeEmail);
+        farmer.setKycRejectionReason(reason);
+        farmer.setKycReferBackReason(null);
+        
         farmerRepository.save(farmer);
     }
 }
