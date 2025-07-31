@@ -55,6 +55,17 @@ public class AuthController {
             response.put("token", token);
             response.put("message", "Login successful");
             response.put("forcePasswordChange", user.isForcePasswordChange());
+            
+            // Add user information directly to login response
+            response.put("user", new HashMap<String, Object>() {{
+                put("id", user.getId());
+                put("name", user.getName());
+                put("email", user.getEmail());
+                put("phoneNumber", user.getPhoneNumber());
+                put("role", user.getRole().name());
+                put("status", user.getStatus().name());
+            }});
+            
             return ResponseEntity.ok(response);
         } catch (UserNotApprovedException e) {
             Map<String, Object> error = new HashMap<>();
@@ -275,6 +286,30 @@ public class AuthController {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
+    // ✅ Get current user profile
+    @GetMapping("/users/profile")
+    public ResponseEntity<Map<String, Object>> getCurrentUserProfile(Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            User user = userService.getUserByEmailOrPhone(userEmail);
+            
+            Map<String, Object> profile = new HashMap<>();
+            profile.put("id", user.getId());
+            profile.put("name", user.getName());
+            profile.put("email", user.getEmail());
+            profile.put("phoneNumber", user.getPhoneNumber());
+            profile.put("role", user.getRole().name());
+            profile.put("status", user.getStatus().name());
+            profile.put("forcePasswordChange", user.isForcePasswordChange());
+            
+            return ResponseEntity.ok(profile);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "Error fetching user profile: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
     // ✅ Update user status
     @PutMapping("/users/{id}/status")
     public ResponseEntity<String> updateUserStatus(@PathVariable Long id, @RequestBody Map<String, String> request) {
@@ -305,6 +340,46 @@ public class AuthController {
     @GetMapping("/test")
     public String test() {
         return "This is a test endpoint.";
+    }
+
+    // 🔧 Test login endpoint for debugging
+    @PostMapping("/test-login")
+    public ResponseEntity<Map<String, Object>> testLogin(@RequestBody Map<String, String> request) {
+        try {
+            String userName = request.get("userName");
+            String password = request.get("password");
+            
+            if (userName == null || password == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("message", "userName and password are required");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            // Try to authenticate
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(userName, password)
+            );
+            
+            // Get user details
+            User user = userService.getUserByEmailOrPhone(userName);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Test login successful");
+            response.put("userName", userName);
+            response.put("userRole", user.getRole().name());
+            response.put("userName_display", user.getName());
+            response.put("userEmail", user.getEmail());
+            response.put("userStatus", user.getStatus().name());
+            response.put("forcePasswordChange", user.isForcePasswordChange());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Test login failed: " + e.getMessage());
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body(error);
+        }
     }
 
     // 🔧 Test registration endpoint

@@ -26,5 +26,20 @@ public interface EmployeeService {
     
     // Get employee by email
     Employee getEmployeeByEmail(String email);
+
+    // Generate temporary password for employee login access
+    String generateTempPassword();
+
+    // Create or update user account for employee
+    boolean createOrUpdateUserAccount(Employee employee, String tempPassword);
+
+    // Assign farmers to employee
+    int assignFarmersToEmployee(Long employeeId, List<Long> farmerIds);
+
+    // Get available farmers for assignment (not assigned to any employee)
+    List<com.farmer.Form.Entity.Farmer> getAvailableFarmersForAssignment(Long employeeId);
+
+    // Get assigned farmers for employee
+    List<com.farmer.Form.Entity.Farmer> getAssignedFarmersForEmployee(Long employeeId);
 }
  

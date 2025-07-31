@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Actions Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .response-display {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .action-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            background: white;
+        }
+        .action-card h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Employee Actions Test</h1>
+    <p>Testing the new employee action endpoints for the 3-dots menu functionality.</p>
+
+    <div class="test-container">
+        <h2>📋 Available Endpoints</h2>
+        <div class="action-grid">
+            <div class="action-card">
+                <h3>👁️ View Employee Details</h3>
+                <div class="endpoint">
+                    GET /api/employees/{id}/details
+                </div>
+                <p>Get detailed information about an employee</p>
+                <button onclick="testViewEmployee()">Test View Employee</button>
+            </div>
+
+            <div class="action-card">
+                <h3>🔐 Give Login Access</h3>
+                <div class="endpoint">
+                    POST /api/employees/{id}/give-login-access
+                </div>
+                <p>Generate temporary password and send email</p>
+                <button onclick="testGiveLoginAccess()">Test Give Login Access</button>
+            </div>
+
+            <div class="action-card">
+                <h3>👥 Assign Farmers</h3>
+                <div class="endpoint">
+                    POST /api/employees/{id}/assign-farmers
+                </div>
+                <p>Assign multiple farmers to an employee</p>
+                <button onclick="testAssignFarmers()">Test Assign Farmers</button>
+            </div>
+
+            <div class="action-card">
+                <h3>📋 Available Farmers</h3>
+                <div class="endpoint">
+                    GET /api/employees/{id}/available-farmers
+                </div>
+                <p>Get farmers available for assignment</p>
+                <button onclick="testGetAvailableFarmers()">Test Get Available Farmers</button>
+            </div>
+
+            <div class="action-card">
+                <h3>👥 Assigned Farmers</h3>
+                <div class="endpoint">
+                    GET /api/employees/{id}/assigned-farmers
+                </div>
+                <p>Get farmers assigned to an employee</p>
+                <button onclick="testGetAssignedFarmers()">Test Get Assigned Farmers</button>
+            </div>
+
+            <div class="action-card">
+                <h3>🗑️ Delete Employee</h3>
+                <div class="endpoint">
+                    DELETE /api/employees/{id}
+                </div>
+                <p>Delete an employee (existing endpoint)</p>
+                <button onclick="testDeleteEmployee()">Test Delete Employee</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>🧪 Test Results</h2>
+        <div id="testResult" class="status"></div>
+        <div id="responseData" class="response-display"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>📝 Frontend Integration Guide</h2>
+        <div class="status info">
+            <h3>3-Dots Menu Implementation:</h3>
+            <p><strong>1. Replace View/Delete buttons with 3-dots menu:</strong></p>
+            <pre>
+// Instead of:
+&lt;button&gt;View&lt;/button&gt; &lt;button&gt;Delete&lt;/button&gt;
+
+// Use:
+&lt;div class="dropdown"&gt;
+  &lt;button class="dropdown-toggle"&gt;⋮&lt;/button&gt;
+  &lt;div class="dropdown-menu"&gt;
+    &lt;a href="#" onclick="viewEmployee(id)"&gt;View Employee&lt;/a&gt;
+    &lt;a href="#" onclick="giveLoginAccess(id)"&gt;Give Login Access&lt;/a&gt;
+    &lt;a href="#" onclick="assignFarmers(id)"&gt;Assign Farmers&lt;/a&gt;
+    &lt;a href="#" onclick="deleteEmployee(id)"&gt;Delete Employee&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+            </pre>
+            
+            <p><strong>2. JavaScript functions for each action:</strong></p>
+            <pre>
+async function viewEmployee(employeeId) {
+  const response = await fetch(`/api/employees/${employeeId}/details`);
+  const data = await response.json();
+  // Show employee details in modal
+}
+
+async function giveLoginAccess(employeeId) {
+  const response = await fetch(`/api/employees/${employeeId}/give-login-access`, {
+    method: 'POST'
+  });
+  const data = await response.json();
+  // Show success message with temp password
+}
+
+async function assignFarmers(employeeId) {
+  // First get available farmers
+  const farmersResponse = await fetch(`/api/employees/${employeeId}/available-farmers`);
+  const farmers = await farmersResponse.json();
+  // Show farmer selection modal
+  // Then assign selected farmers
+  const response = await fetch(`/api/employees/${employeeId}/assign-farmers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ farmerIds: selectedFarmerIds })
+  });
+}
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        const testEmployeeId = 1; // Change this to test with different employee
+
+        async function testViewEmployee() {
+            const resultDiv = document.getElementById('testResult');
+            const dataDiv = document.getElementById('responseData');
+            
+            resultDiv.className = 'status info';
+            resultDiv.textContent = 'Testing view employee details...';
+            dataDiv.textContent = '';
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/employees/${testEmployeeId}/details`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'status success';
+                    resultDiv.innerHTML = `
+                        ✅ Employee details fetched successfully!<br>
+                        Employee ID: ${data.employeeId}<br>
+                        Name: ${data.name}<br>
+                        Email: ${data.email}<br>
+                        Role: ${data.designation}
+                    `;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'status error';
+                    resultDiv.textContent = '❌ Failed to fetch employee details: ' + data.message;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = '❌ Network error: ' + error.message;
+            }
+        }
+
+        async function testGiveLoginAccess() {
+            const resultDiv = document.getElementById('testResult');
+            const dataDiv = document.getElementById('responseData');
+            
+            resultDiv.className = 'status info';
+            resultDiv.textContent = 'Testing give login access...';
+            dataDiv.textContent = '';
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/employees/${testEmployeeId}/give-login-access`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'status success';
+                    resultDiv.innerHTML = `
+                        ✅ Login access granted successfully!<br>
+                        Employee: ${data.employeeName}<br>
+                        Email: ${data.email}<br>
+                        Temporary Password: ${data.tempPassword}
+                    `;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'status error';
+                    resultDiv.textContent = '❌ Failed to give login access: ' + data.message;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = '❌ Network error: ' + error.message;
+            }
+        }
+
+        async function testAssignFarmers() {
+            const resultDiv = document.getElementById('testResult');
+            const dataDiv = document.getElementById('responseData');
+            
+            resultDiv.className = 'status info';
+            resultDiv.textContent = 'Testing assign farmers...';
+            dataDiv.textContent = '';
+            
+            try {
+                // First get available farmers
+                const farmersResponse = await fetch(`http://localhost:8080/api/employees/${testEmployeeId}/available-farmers`);
+                const farmers = await farmersResponse.json();
+                
+                if (farmers.length === 0) {
+                    resultDiv.className = 'status info';
+                    resultDiv.textContent = 'ℹ️ No available farmers to assign';
+                    dataDiv.textContent = JSON.stringify(farmers, null, 2);
+                    return;
+                }
+                
+                // Assign first 2 farmers (if available)
+                const farmerIds = farmers.slice(0, 2).map(f => f.id);
+                
+                const response = await fetch(`http://localhost:8080/api/employees/${testEmployeeId}/assign-farmers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ farmerIds: farmerIds })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'status success';
+                    resultDiv.innerHTML = `
+                        ✅ Farmers assigned successfully!<br>
+                        Employee: ${data.employeeName}<br>
+                        Assigned: ${data.assignedCount}/${data.totalRequested} farmers
+                    `;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'status error';
+                    resultDiv.textContent = '❌ Failed to assign farmers: ' + data.message;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = '❌ Network error: ' + error.message;
+            }
+        }
+
+        async function testGetAvailableFarmers() {
+            const resultDiv = document.getElementById('testResult');
+            const dataDiv = document.getElementById('responseData');
+            
+            resultDiv.className = 'status info';
+            resultDiv.textContent = 'Testing get available farmers...';
+            dataDiv.textContent = '';
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/employees/${testEmployeeId}/available-farmers`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'status success';
+                    resultDiv.innerHTML = `
+                        ✅ Available farmers fetched successfully!<br>
+                        Count: ${data.length} farmers available for assignment
+                    `;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'status error';
+                    resultDiv.textContent = '❌ Failed to get available farmers';
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = '❌ Network error: ' + error.message;
+            }
+        }
+
+        async function testGetAssignedFarmers() {
+            const resultDiv = document.getElementById('testResult');
+            const dataDiv = document.getElementById('responseData');
+            
+            resultDiv.className = 'status info';
+            resultDiv.textContent = 'Testing get assigned farmers...';
+            dataDiv.textContent = '';
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/employees/${testEmployeeId}/assigned-farmers`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'status success';
+                    resultDiv.innerHTML = `
+                        ✅ Assigned farmers fetched successfully!<br>
+                        Count: ${data.length} farmers assigned to this employee
+                    `;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'status error';
+                    resultDiv.textContent = '❌ Failed to get assigned farmers';
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = '❌ Network error: ' + error.message;
+            }
+        }
+
+        async function testDeleteEmployee() {
+            const resultDiv = document.getElementById('testResult');
+            const dataDiv = document.getElementById('responseData');
+            
+            resultDiv.className = 'status info';
+            resultDiv.textContent = 'Testing delete employee...';
+            dataDiv.textContent = '';
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/employees/${testEmployeeId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    resultDiv.className = 'status success';
+                    resultDiv.textContent = '✅ Employee deleted successfully!';
+                } else {
+                    const data = await response.json();
+                    resultDiv.className = 'status error';
+                    resultDiv.textContent = '❌ Failed to delete employee: ' + data.message;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = '❌ Network error: ' + error.message;
+            }
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            console.log('Employee Actions Test Page Loaded');
+            console.log('Ready to test the new employee action endpoints');
+        };
+    </script>
+</body>
+</html> 

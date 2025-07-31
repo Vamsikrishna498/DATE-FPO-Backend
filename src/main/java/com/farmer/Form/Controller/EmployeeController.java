@@ -56,6 +56,27 @@ public class EmployeeController {
     public ResponseEntity<List<Employee>> getAllEmployees() {
         return ResponseEntity.ok(employeeService.getAllEmployees());
     }
+
+    // ✅ Get all employees with formatted data for frontend
+    @GetMapping("/list")
+    public ResponseEntity<List<Map<String, Object>>> getEmployeesList() {
+        List<Employee> employees = employeeService.getAllEmployees();
+        
+        List<Map<String, Object>> employeeList = employees.stream().map(employee -> {
+            Map<String, Object> employeeData = new HashMap<>();
+            employeeData.put("id", employee.getId());
+            employeeData.put("employeeId", "EMP" + String.format("%06d", employee.getId())); // Format: EMP000001
+            employeeData.put("name", employee.getFirstName() + " " + employee.getLastName());
+            employeeData.put("designation", employee.getRole() != null ? employee.getRole() : "employee");
+            employeeData.put("district", employee.getDistrict());
+            employeeData.put("contactNumber", employee.getContactNumber());
+            employeeData.put("email", employee.getEmail());
+            employeeData.put("status", employee.getAccessStatus() != null ? employee.getAccessStatus() : "ACTIVE");
+            return employeeData;
+        }).collect(Collectors.toList());
+        
+        return ResponseEntity.ok(employeeList);
+    }
  
     // ✅ Get one employee by ID
     @GetMapping("/{id}")
@@ -307,6 +328,173 @@ public class EmployeeController {
         String employeeEmail = authentication.getName();
         Employee employee = employeeService.getEmployeeByEmail(employeeEmail);
         return employee != null ? ResponseEntity.ok(employee) : ResponseEntity.notFound().build();
+    }
+
+    // ✅ View Employee Details
+    @GetMapping("/{id}/details")
+    public ResponseEntity<Map<String, Object>> getEmployeeDetails(@PathVariable Long id) {
+        try {
+            Employee employee = employeeService.getEmployeeById(id);
+            if (employee == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Map<String, Object> details = new HashMap<>();
+            details.put("id", employee.getId());
+            details.put("employeeId", "EMP" + String.format("%06d", employee.getId()));
+            details.put("name", employee.getFirstName() + " " + employee.getLastName());
+            details.put("designation", employee.getRole());
+            details.put("email", employee.getEmail());
+            details.put("contactNumber", employee.getContactNumber());
+            details.put("district", employee.getDistrict());
+            details.put("state", employee.getState());
+            details.put("status", employee.getAccessStatus());
+            details.put("education", employee.getEducation());
+            details.put("experience", employee.getExperience());
+            details.put("bankName", employee.getBankName());
+            details.put("accountNumber", employee.getAccountNumber());
+            details.put("ifscCode", employee.getIfscCode());
+            details.put("photoFileName", employee.getPhotoFileName());
+            details.put("passbookFileName", employee.getPassbookFileName());
+            details.put("documentFileName", employee.getDocumentFileName());
+
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "Error fetching employee details: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    // ✅ Give Login Access to Employee
+    @PostMapping("/{id}/give-login-access")
+    public ResponseEntity<Map<String, Object>> giveLoginAccess(@PathVariable Long id) {
+        try {
+            Employee employee = employeeService.getEmployeeById(id);
+            if (employee == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Generate temporary password
+            String tempPassword = employeeService.generateTempPassword();
+            
+            // Create or update user account for employee
+            boolean success = employeeService.createOrUpdateUserAccount(employee, tempPassword);
+            
+            if (success) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "Login access granted successfully");
+                response.put("employeeId", employee.getId());
+                response.put("employeeName", employee.getFirstName() + " " + employee.getLastName());
+                response.put("email", employee.getEmail());
+                response.put("tempPassword", tempPassword);
+                
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> error = new HashMap<>();
+                error.put("message", "Failed to create login access");
+                return ResponseEntity.status(500).body(error);
+            }
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "Error giving login access: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    // ✅ Assign Farmers to Employee
+    @PostMapping("/{id}/assign-farmers")
+    public ResponseEntity<Map<String, Object>> assignFarmersToEmployee(
+            @PathVariable Long id, 
+            @RequestBody Map<String, Object> request) {
+        try {
+            Employee employee = employeeService.getEmployeeById(id);
+            if (employee == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            @SuppressWarnings("unchecked")
+            List<Long> farmerIds = (List<Long>) request.get("farmerIds");
+            
+            if (farmerIds == null || farmerIds.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("message", "Farmer IDs are required");
+                return ResponseEntity.badRequest().body(error);
+            }
+
+            // Assign farmers to employee
+            int assignedCount = employeeService.assignFarmersToEmployee(id, farmerIds);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Farmers assigned successfully");
+            response.put("employeeId", id);
+            response.put("employeeName", employee.getFirstName() + " " + employee.getLastName());
+            response.put("assignedCount", assignedCount);
+            response.put("totalRequested", farmerIds.size());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "Error assigning farmers: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    // ✅ Get Available Farmers for Assignment
+    @GetMapping("/{id}/available-farmers")
+    public ResponseEntity<List<Map<String, Object>>> getAvailableFarmersForAssignment(@PathVariable Long id) {
+        try {
+            Employee employee = employeeService.getEmployeeById(id);
+            if (employee == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            List<Farmer> availableFarmers = employeeService.getAvailableFarmersForAssignment(id);
+            
+            List<Map<String, Object>> farmersList = availableFarmers.stream().map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+                return farmerData;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(farmersList);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(List.of());
+        }
+    }
+
+    // ✅ Get Assigned Farmers for Employee
+    @GetMapping("/{id}/assigned-farmers")
+    public ResponseEntity<List<Map<String, Object>>> getAssignedFarmersForEmployee(@PathVariable Long id) {
+        try {
+            Employee employee = employeeService.getEmployeeById(id);
+            if (employee == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            List<Farmer> assignedFarmers = employeeService.getAssignedFarmersForEmployee(id);
+            
+            List<Map<String, Object>> farmersList = assignedFarmers.stream().map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+                // Note: assignedDate not available in Farmer entity
+                return farmerData;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(farmersList);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(List.of());
+        }
     }
 }
  

@@ -1,18 +1,31 @@
 package com.farmer.Form.Service.Impl;
  
 import com.farmer.Form.Entity.Employee;
+import com.farmer.Form.Entity.Farmer;
+import com.farmer.Form.Entity.User;
+import com.farmer.Form.Entity.Role;
+import com.farmer.Form.Entity.UserStatus;
 import com.farmer.Form.Repository.EmployeeRepository;
+import com.farmer.Form.Repository.FarmerRepository;
+import com.farmer.Form.Repository.UserRepository;
 import com.farmer.Form.Service.EmployeeService;
+import com.farmer.Form.Service.EmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
- 
+
 import java.util.List;
+import java.util.Random;
  
 @Service
 @RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
- 
+
     private final EmployeeRepository repository;
+    private final FarmerRepository farmerRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
  
     @Override
     public Employee saveEmployee(Employee updated) {
@@ -112,6 +125,96 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public Employee getEmployeeByEmail(String email) {
         return repository.findByEmail(email).orElse(null);
+    }
+
+    @Override
+    public String generateTempPassword() {
+        // Generate a temporary password with format: Emp@123456
+        Random random = new Random();
+        int number = random.nextInt(900000) + 100000; // 6-digit number
+        return "Emp@" + number;
+    }
+
+    @Override
+    public boolean createOrUpdateUserAccount(Employee employee, String tempPassword) {
+        try {
+            // Check if user already exists
+            User existingUser = userRepository.findByEmail(employee.getEmail()).orElse(null);
+            
+            if (existingUser != null) {
+                // Update existing user
+                existingUser.setPassword(passwordEncoder.encode(tempPassword));
+                existingUser.setForcePasswordChange(true);
+                existingUser.setStatus(UserStatus.APPROVED);
+                userRepository.save(existingUser);
+            } else {
+                // Create new user account
+                User newUser = User.builder()
+                    .name(employee.getFirstName() + " " + employee.getLastName())
+                    .email(employee.getEmail())
+                    .phoneNumber(employee.getContactNumber())
+                    .password(passwordEncoder.encode(tempPassword))
+                    .role(Role.EMPLOYEE)
+                    .status(UserStatus.APPROVED)
+                    .forcePasswordChange(true)
+                    .build();
+                userRepository.save(newUser);
+            }
+            
+            // Send email with login credentials
+            try {
+                emailService.sendAccountApprovedEmail(
+                    employee.getEmail(), 
+                    employee.getFirstName() + " " + employee.getLastName(), 
+                    tempPassword
+                );
+            } catch (Exception e) {
+                // Log error but don't fail the operation
+                System.err.println("Failed to send email: " + e.getMessage());
+            }
+            
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error creating user account: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public int assignFarmersToEmployee(Long employeeId, List<Long> farmerIds) {
+        int assignedCount = 0;
+        
+        Employee employee = repository.findById(employeeId).orElse(null);
+        if (employee == null) {
+            return 0;
+        }
+        
+        for (Long farmerId : farmerIds) {
+            try {
+                Farmer farmer = farmerRepository.findById(farmerId).orElse(null);
+                if (farmer != null) {
+                    farmer.setAssignedEmployee(employee);
+                    farmerRepository.save(farmer);
+                    assignedCount++;
+                }
+            } catch (Exception e) {
+                System.err.println("Error assigning farmer " + farmerId + ": " + e.getMessage());
+            }
+        }
+        
+        return assignedCount;
+    }
+
+    @Override
+    public List<Farmer> getAvailableFarmersForAssignment(Long employeeId) {
+        // Get farmers that are not assigned to any employee
+        return farmerRepository.findByAssignedEmployeeIsNull();
+    }
+
+    @Override
+    public List<Farmer> getAssignedFarmersForEmployee(Long employeeId) {
+        // Get farmers assigned to this specific employee
+        return farmerRepository.findByAssignedEmployee_Id(employeeId);
     }
 }
  
