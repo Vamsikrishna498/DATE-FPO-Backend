@@ -3,6 +3,7 @@ package com.farmer.Form.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -40,5 +41,37 @@ public class User {
     @Enumerated(EnumType.STRING)
     private UserStatus status;
 
+    @Enumerated(EnumType.STRING)
+    private KycStatus kycStatus;
+
+    private String state;
+    private String district;
+    private String region;
+    private Long assignedEmployeeId; // For farmers assigned to employees
+    
+    @Column(nullable = true) // Temporarily nullable for migration
+    private LocalDateTime createdAt;
+    
+    @Column(nullable = true) // Temporarily nullable for migration
+    private LocalDateTime updatedAt;
+
     private boolean forcePasswordChange;
+    
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+        if (kycStatus == null) {
+            kycStatus = KycStatus.PENDING;
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

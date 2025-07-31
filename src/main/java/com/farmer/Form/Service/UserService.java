@@ -19,7 +19,8 @@ import com.farmer.Form.exception.UserNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.farmer.Form.Entity.Role;
+
+    import com.farmer.Form.Entity.Role;
  
 @Service
 @RequiredArgsConstructor
@@ -47,11 +48,18 @@ public class UserService {
         }
  
         User user = userMapper.toEntity(userDTO);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        // Handle password - set to null since registration doesn't require password
+        // Super admin will assign temporary password upon approval
+        user.setPassword(null);
+        
         // Set role from DTO (convert to enum)
         user.setRole(com.farmer.Form.Entity.Role.valueOf(userDTO.getRole().toUpperCase()));
         user.setStatus(com.farmer.Form.Entity.UserStatus.PENDING);
         user.setForcePasswordChange(false);
+        
+        // Set KYC status to PENDING by default
+        user.setKycStatus(com.farmer.Form.Entity.KycStatus.PENDING);
  
         User savedUser = userRepository.save(user);
         // Replace clearVerification with clearEmailVerification
@@ -76,13 +84,19 @@ public class UserService {
         });
  
         User user = userMapper.toEntity(userDTO);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        // Handle password - set to null since registration doesn't require password
+        // Super admin will assign temporary password upon approval
+        user.setPassword(null);
         
         // Set role from DTO (convert to enum)
         Role role = com.farmer.Form.Entity.Role.valueOf(userDTO.getRole().toUpperCase());
         user.setRole(role);
         user.setStatus(com.farmer.Form.Entity.UserStatus.PENDING);
         user.setForcePasswordChange(false);
+        
+        // Set KYC status to PENDING by default
+        user.setKycStatus(com.farmer.Form.Entity.KycStatus.PENDING);
         
         // Handle optional fields with default values
         if (user.getName() == null || user.getName().trim().isEmpty()) {
@@ -278,7 +292,12 @@ public class UserService {
     }
 
     public User createUserBySuperAdmin(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        // Only encode password if it's not null
+        if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        } else {
+            user.setPassword(null);
+        }
         return userRepository.save(user);
     }
 

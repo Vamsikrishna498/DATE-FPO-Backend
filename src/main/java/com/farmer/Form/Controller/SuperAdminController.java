@@ -3,9 +3,13 @@ package com.farmer.Form.Controller;
 import com.farmer.Form.Entity.User;
 import com.farmer.Form.Entity.Farmer;
 import com.farmer.Form.Entity.Employee;
+import com.farmer.Form.DTO.DashboardStatsDTO;
+import com.farmer.Form.DTO.EmployeeStatsDTO;
+import com.farmer.Form.DTO.TodoItemsDTO;
 import com.farmer.Form.Service.UserService;
 import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.EmployeeService;
+import com.farmer.Form.Service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +28,7 @@ public class SuperAdminController {
     private final UserService userService;
     private final FarmerService farmerService;
     private final EmployeeService employeeService;
+    private final DashboardService dashboardService;
 
     // --- USER CRUD ---
     @GetMapping("/users")
@@ -152,24 +157,18 @@ public class SuperAdminController {
 
     // --- DASHBOARD ENDPOINTS ---
     @GetMapping("/dashboard/stats")
-    public ResponseEntity<Map<String, Object>> getDashboardStats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalFarmers", farmerService.getFarmerCount());
-        stats.put("totalEmployees", employeeService.getAllEmployeesRaw().size());
-        stats.put("pendingUsers", userService.getUsersByStatus("PENDING").size());
-        stats.put("approvedUsers", userService.getUsersByStatus("APPROVED").size());
-        
-        // Add role-based stats
-        stats.put("pendingEmployees", userService.getPendingUsersByRoleRaw(Role.EMPLOYEE).size());
-        stats.put("pendingFarmers", userService.getPendingUsersByRoleRaw(Role.FARMER).size());
-        stats.put("approvedEmployees", userService.getUsersByRoleRaw(Role.EMPLOYEE).stream()
-                .filter(user -> user.getStatus() == com.farmer.Form.Entity.UserStatus.APPROVED)
-                .count());
-        stats.put("approvedFarmers", userService.getUsersByRoleRaw(Role.FARMER).stream()
-                .filter(user -> user.getStatus() == com.farmer.Form.Entity.UserStatus.APPROVED)
-                .count());
-        
-        return ResponseEntity.ok(stats);
+    public ResponseEntity<DashboardStatsDTO> getDashboardStats() {
+        return ResponseEntity.ok(dashboardService.getSuperAdminDashboardStats());
+    }
+    
+    @GetMapping("/dashboard/employee-stats")
+    public ResponseEntity<List<EmployeeStatsDTO>> getEmployeeStats() {
+        return ResponseEntity.ok(dashboardService.getEmployeeStats());
+    }
+    
+    @GetMapping("/dashboard/todo")
+    public ResponseEntity<TodoItemsDTO> getTodoItems() {
+        return ResponseEntity.ok(dashboardService.getTodoItems());
     }
 
     @GetMapping("/pending-registrations")
