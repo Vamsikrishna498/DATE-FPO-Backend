@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -279,5 +280,197 @@ public class AdminController {
         locations.put("districts", districts);
         
         return ResponseEntity.ok(locations);
+    }
+
+    // --- NEW ENHANCED FEATURES ---
+
+    // Bulk assign farmers to employee
+    @PostMapping("/bulk-assign-farmers")
+    public ResponseEntity<Map<String, Object>> bulkAssignFarmers(@RequestBody Map<String, Object> request) {
+        List<Long> farmerIds = (List<Long>) request.get("farmerIds");
+        Long employeeId = Long.valueOf(request.get("employeeId").toString());
+        
+        Employee employee = employeeService.getEmployeeRawById(employeeId);
+        if (employee == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Employee not found"));
+        }
+        
+        int assignedCount = 0;
+        for (Long farmerId : farmerIds) {
+            try {
+                farmerService.assignFarmerToEmployee(farmerId, employeeId);
+                assignedCount++;
+            } catch (Exception e) {
+                // Log error but continue with other assignments
+                System.err.println("Error assigning farmer " + farmerId + ": " + e.getMessage());
+            }
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", assignedCount + " farmers assigned successfully");
+        response.put("assignedCount", assignedCount);
+        response.put("totalRequested", farmerIds.size());
+        
+        return ResponseEntity.ok(response);
+    }
+
+    // Get assignment history/audit log
+    @GetMapping("/assignment-history")
+    public ResponseEntity<List<Map<String, Object>>> getAssignmentHistory(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) Long employeeId) {
+        
+        // This would typically come from an audit log table
+        // For now, we'll simulate assignment history from current data
+        List<Farmer> allFarmers = farmerService.getAllFarmersRaw();
+        List<Map<String, Object>> assignmentHistory = allFarmers.stream()
+            .filter(farmer -> farmer.getAssignedEmployee() != null)
+            .map(farmer -> {
+                Map<String, Object> historyEntry = new HashMap<>();
+                historyEntry.put("farmerId", farmer.getId());
+                historyEntry.put("farmerName", farmer.getFirstName() + " " + farmer.getLastName());
+                historyEntry.put("employeeId", farmer.getAssignedEmployee().getId());
+                historyEntry.put("employeeName", farmer.getAssignedEmployee().getFirstName() + " " + farmer.getAssignedEmployee().getLastName());
+                historyEntry.put("assignedDate", farmer.getKycSubmittedDate() != null ? farmer.getKycSubmittedDate() : LocalDate.now());
+                historyEntry.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+                return historyEntry;
+            }).collect(Collectors.toList());
+        
+        // Apply filters if provided
+        if (employeeId != null) {
+            assignmentHistory = assignmentHistory.stream()
+                .filter(entry -> employeeId.equals(entry.get("employeeId")))
+                .collect(Collectors.toList());
+        }
+        
+        return ResponseEntity.ok(assignmentHistory);
+    }
+
+    // Enhanced todo list with more detailed information
+    @GetMapping("/enhanced-todo-list")
+    public ResponseEntity<Map<String, Object>> getEnhancedTodoList() {
+        List<Farmer> allFarmers = farmerService.getAllFarmersRaw();
+        List<Employee> allEmployees = employeeService.getAllEmployeesRaw();
+        
+        // Unassigned farmers
+        List<Map<String, Object>> unassignedFarmers = allFarmers.stream()
+            .filter(farmer -> farmer.getAssignedEmployee() == null)
+            .map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("village", farmer.getVillage());
+                farmerData.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+                return farmerData;
+            }).collect(Collectors.toList());
+        
+        // Farmers awaiting employee KYC action
+        List<Map<String, Object>> awaitingKycAction = allFarmers.stream()
+            .filter(farmer -> farmer.getAssignedEmployee() != null && 
+                    (farmer.getKycStatus() == null || farmer.getKycStatus() == Farmer.KycStatus.PENDING))
+            .map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("assignedEmployee", farmer.getAssignedEmployee().getFirstName() + " " + farmer.getAssignedEmployee().getLastName());
+                farmerData.put("assignedEmployeeId", farmer.getAssignedEmployee().getId());
+                farmerData.put("kycSubmittedDate", farmer.getKycSubmittedDate());
+                return farmerData;
+            }).collect(Collectors.toList());
+        
+        // Farmers with refer-back status (document re-submissions)
+        List<Map<String, Object>> documentResubmissions = allFarmers.stream()
+            .filter(farmer -> farmer.getAssignedEmployee() != null && 
+                    farmer.getKycStatus() == Farmer.KycStatus.REFER_BACK)
+            .map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("assignedEmployee", farmer.getAssignedEmployee().getFirstName() + " " + farmer.getAssignedEmployee().getLastName());
+                farmerData.put("assignedEmployeeId", farmer.getAssignedEmployee().getId());
+                farmerData.put("kycReferBackReason", farmer.getKycReferBackReason());
+                farmerData.put("kycReviewedDate", farmer.getKycReviewedDate());
+                return farmerData;
+            }).collect(Collectors.toList());
+        
+        // Employees with large pending queues
+        List<Map<String, Object>> employeesWithLargeQueues = allEmployees.stream()
+            .map(employee -> {
+                List<Farmer> assignedFarmers = farmerService.getFarmersByEmployeeEmail(employee.getEmail());
+                long pendingCount = assignedFarmers.stream()
+                    .filter(f -> f.getKycStatus() == null || f.getKycStatus() == Farmer.KycStatus.PENDING).count();
+                
+                if (pendingCount > 5) { // Large queue threshold
+                    Map<String, Object> employeeData = new HashMap<>();
+                    employeeData.put("id", employee.getId());
+                    employeeData.put("name", employee.getFirstName() + " " + employee.getLastName());
+                    employeeData.put("email", employee.getEmail());
+                    employeeData.put("pendingCount", pendingCount);
+                    employeeData.put("totalAssigned", assignedFarmers.size());
+                    return employeeData;
+                }
+                return null;
+            }).filter(employee -> employee != null).collect(Collectors.toList());
+        
+        Map<String, Object> enhancedTodoList = new HashMap<>();
+        enhancedTodoList.put("unassignedFarmers", unassignedFarmers);
+        enhancedTodoList.put("awaitingKycAction", awaitingKycAction);
+        enhancedTodoList.put("documentResubmissions", documentResubmissions);
+        enhancedTodoList.put("employeesWithLargeQueues", employeesWithLargeQueues);
+        enhancedTodoList.put("totalUnassigned", unassignedFarmers.size());
+        enhancedTodoList.put("totalAwaitingKyc", awaitingKycAction.size());
+        enhancedTodoList.put("totalResubmissions", documentResubmissions.size());
+        enhancedTodoList.put("totalLargeQueues", employeesWithLargeQueues.size());
+        
+        return ResponseEntity.ok(enhancedTodoList);
+    }
+
+    // Get farmers by assignment status
+    @GetMapping("/farmers/by-assignment-status")
+    public ResponseEntity<List<Map<String, Object>>> getFarmersByAssignmentStatus(
+            @RequestParam(required = false) String assignmentStatus) {
+        
+        List<Farmer> allFarmers = farmerService.getAllFarmersRaw();
+        List<Farmer> filteredFarmers;
+        
+        if ("assigned".equalsIgnoreCase(assignmentStatus)) {
+            filteredFarmers = allFarmers.stream()
+                .filter(farmer -> farmer.getAssignedEmployee() != null)
+                .collect(Collectors.toList());
+        } else if ("unassigned".equalsIgnoreCase(assignmentStatus)) {
+            filteredFarmers = allFarmers.stream()
+                .filter(farmer -> farmer.getAssignedEmployee() == null)
+                .collect(Collectors.toList());
+        } else {
+            filteredFarmers = allFarmers;
+        }
+        
+        List<Map<String, Object>> farmersData = filteredFarmers.stream().map(farmer -> {
+            Map<String, Object> farmerData = new HashMap<>();
+            farmerData.put("id", farmer.getId());
+            farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+            farmerData.put("contactNumber", farmer.getContactNumber());
+            farmerData.put("state", farmer.getState());
+            farmerData.put("district", farmer.getDistrict());
+            farmerData.put("village", farmer.getVillage());
+            farmerData.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+            farmerData.put("assignedEmployee", farmer.getAssignedEmployee() != null ? 
+                farmer.getAssignedEmployee().getFirstName() + " " + farmer.getAssignedEmployee().getLastName() : "Not Assigned");
+            farmerData.put("assignedEmployeeId", farmer.getAssignedEmployee() != null ? 
+                farmer.getAssignedEmployee().getId() : null);
+            return farmerData;
+        }).collect(Collectors.toList());
+        
+        return ResponseEntity.ok(farmersData);
     }
 } 

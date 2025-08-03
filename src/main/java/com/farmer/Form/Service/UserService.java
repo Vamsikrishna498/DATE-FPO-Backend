@@ -37,10 +37,19 @@ public class UserService {
     public User registerUser(UserDTO userDTO) {
         log.info("Registering user with email: {}", userDTO.getEmail());
  
+        // Check for existing email
         userRepository.findByEmail(userDTO.getEmail()).ifPresent(user -> {
             log.warn("Email already registered: {}", userDTO.getEmail());
             throw new UserAlreadyExistsException("Email already registered: " + userDTO.getEmail());
         });
+        
+        // Check for existing phone number
+        if (userDTO.getPhoneNumber() != null && !userDTO.getPhoneNumber().trim().isEmpty()) {
+            userRepository.findByPhoneNumber(userDTO.getPhoneNumber()).ifPresent(user -> {
+                log.warn("Phone number already registered: {}", userDTO.getPhoneNumber());
+                throw new UserAlreadyExistsException("Phone number already registered: " + userDTO.getPhoneNumber());
+            });
+        }
  
         // Replace isVerified with isEmailOtpVerified
         if (!otpService.isEmailOtpVerified(userDTO.getEmail())) {
@@ -78,10 +87,19 @@ public class UserService {
     public User registerUserWithRole(UserDTO userDTO) {
         log.info("Registering user with role: {} and email: {}", userDTO.getRole(), userDTO.getEmail());
  
+        // Check for existing email
         userRepository.findByEmail(userDTO.getEmail()).ifPresent(user -> {
             log.warn("Email already registered: {}", userDTO.getEmail());
             throw new UserAlreadyExistsException("Email already registered: " + userDTO.getEmail());
         });
+        
+        // Check for existing phone number
+        if (userDTO.getPhoneNumber() != null && !userDTO.getPhoneNumber().trim().isEmpty()) {
+            userRepository.findByPhoneNumber(userDTO.getPhoneNumber()).ifPresent(user -> {
+                log.warn("Phone number already registered: {}", userDTO.getPhoneNumber());
+                throw new UserAlreadyExistsException("Phone number already registered: " + userDTO.getPhoneNumber());
+            });
+        }
  
         User user = userMapper.toEntity(userDTO);
         

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
  
 @RestController
 @RequestMapping("/api/employees")
@@ -328,6 +329,253 @@ public class EmployeeController {
         String employeeEmail = authentication.getName();
         Employee employee = employeeService.getEmployeeByEmail(employeeEmail);
         return employee != null ? ResponseEntity.ok(employee) : ResponseEntity.notFound().build();
+    }
+
+    // --- NEW ENHANCED FEATURES ---
+
+    // Get notifications for employee
+    @GetMapping("/dashboard/notifications")
+    public ResponseEntity<List<Map<String, Object>>> getNotifications(Authentication authentication) {
+        String employeeEmail = authentication.getName();
+        List<Farmer> assignedFarmers = farmerService.getFarmersByEmployeeEmail(employeeEmail);
+        
+        List<Map<String, Object>> notifications = new ArrayList<>();
+        
+        // New assignments (assigned within last 3 days)
+        List<Farmer> newAssignments = assignedFarmers.stream()
+            .filter(farmer -> farmer.getKycSubmittedDate() != null && 
+                    farmer.getKycSubmittedDate().isAfter(LocalDate.now().minusDays(3)))
+            .collect(Collectors.toList());
+        
+        for (Farmer farmer : newAssignments) {
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "NEW_ASSIGNMENT");
+            notification.put("message", "New farmer assigned: " + farmer.getFirstName() + " " + farmer.getLastName());
+            notification.put("farmerId", farmer.getId());
+            notification.put("farmerName", farmer.getFirstName() + " " + farmer.getLastName());
+            notification.put("date", farmer.getKycSubmittedDate());
+            notification.put("read", false);
+            notifications.add(notification);
+        }
+        
+        // Pending KYC reminders
+        List<Farmer> pendingFarmers = assignedFarmers.stream()
+            .filter(farmer -> farmer.getKycStatus() == null || farmer.getKycStatus() == Farmer.KycStatus.PENDING)
+            .collect(Collectors.toList());
+        
+        for (Farmer farmer : pendingFarmers) {
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "PENDING_KYC");
+            notification.put("message", "KYC pending for: " + farmer.getFirstName() + " " + farmer.getLastName());
+            notification.put("farmerId", farmer.getId());
+            notification.put("farmerName", farmer.getFirstName() + " " + farmer.getLastName());
+            notification.put("date", LocalDate.now());
+            notification.put("read", false);
+            notifications.add(notification);
+        }
+        
+        // Refer-back cases
+        List<Farmer> referBackCases = assignedFarmers.stream()
+            .filter(farmer -> farmer.getKycStatus() == Farmer.KycStatus.REFER_BACK)
+            .collect(Collectors.toList());
+        
+        for (Farmer farmer : referBackCases) {
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "REFER_BACK");
+            notification.put("message", "Document re-submission required for: " + farmer.getFirstName() + " " + farmer.getLastName());
+            notification.put("farmerId", farmer.getId());
+            notification.put("farmerName", farmer.getFirstName() + " " + farmer.getLastName());
+            notification.put("reason", farmer.getKycReferBackReason());
+            notification.put("date", farmer.getKycReviewedDate());
+            notification.put("read", false);
+            notifications.add(notification);
+        }
+        
+        return ResponseEntity.ok(notifications);
+    }
+
+    // Mark notification as read
+    @PutMapping("/dashboard/notifications/{notificationId}/read")
+    public ResponseEntity<String> markNotificationAsRead(@PathVariable String notificationId) {
+        // In a real implementation, this would update a notification table
+        return ResponseEntity.ok("Notification marked as read");
+    }
+
+    // Get enhanced todo list with priority levels
+    @GetMapping("/dashboard/enhanced-todo-list")
+    public ResponseEntity<Map<String, Object>> getEnhancedTodoList(Authentication authentication) {
+        String employeeEmail = authentication.getName();
+        List<Farmer> assignedFarmers = farmerService.getFarmersByEmployeeEmail(employeeEmail);
+        
+        // High priority: New assignments not yet reviewed
+        List<Map<String, Object>> newAssignments = assignedFarmers.stream()
+            .filter(farmer -> farmer.getKycStatus() == null)
+            .map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("village", farmer.getVillage());
+                farmerData.put("priority", "HIGH");
+                farmerData.put("assignedDate", farmer.getKycSubmittedDate());
+                return farmerData;
+            }).collect(Collectors.toList());
+        
+        // Medium priority: Pending KYC reviews
+        List<Map<String, Object>> pendingReviews = assignedFarmers.stream()
+            .filter(farmer -> farmer.getKycStatus() == Farmer.KycStatus.PENDING)
+            .map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("village", farmer.getVillage());
+                farmerData.put("priority", "MEDIUM");
+                farmerData.put("kycSubmittedDate", farmer.getKycSubmittedDate());
+                return farmerData;
+            }).collect(Collectors.toList());
+        
+        // High priority: Refer-back cases requiring attention
+        List<Map<String, Object>> referBackCases = assignedFarmers.stream()
+            .filter(farmer -> farmer.getKycStatus() == Farmer.KycStatus.REFER_BACK)
+            .map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("village", farmer.getVillage());
+                farmerData.put("priority", "HIGH");
+                farmerData.put("kycReferBackReason", farmer.getKycReferBackReason());
+                farmerData.put("kycReviewedDate", farmer.getKycReviewedDate());
+                return farmerData;
+            }).collect(Collectors.toList());
+        
+        // Overdue cases (pending for more than 7 days)
+        List<Map<String, Object>> overdueCases = assignedFarmers.stream()
+            .filter(farmer -> (farmer.getKycStatus() == null || farmer.getKycStatus() == Farmer.KycStatus.PENDING) &&
+                    farmer.getKycSubmittedDate() != null &&
+                    farmer.getKycSubmittedDate().isBefore(LocalDate.now().minusDays(7)))
+            .map(farmer -> {
+                Map<String, Object> farmerData = new HashMap<>();
+                farmerData.put("id", farmer.getId());
+                farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+                farmerData.put("contactNumber", farmer.getContactNumber());
+                farmerData.put("state", farmer.getState());
+                farmerData.put("district", farmer.getDistrict());
+                farmerData.put("village", farmer.getVillage());
+                farmerData.put("priority", "URGENT");
+                farmerData.put("kycSubmittedDate", farmer.getKycSubmittedDate());
+                farmerData.put("daysOverdue", LocalDate.now().getDayOfYear() - farmer.getKycSubmittedDate().getDayOfYear());
+                return farmerData;
+            }).collect(Collectors.toList());
+        
+        Map<String, Object> enhancedTodoList = new HashMap<>();
+        enhancedTodoList.put("newAssignments", newAssignments);
+        enhancedTodoList.put("pendingReviews", pendingReviews);
+        enhancedTodoList.put("referBackCases", referBackCases);
+        enhancedTodoList.put("overdueCases", overdueCases);
+        enhancedTodoList.put("totalNewAssignments", newAssignments.size());
+        enhancedTodoList.put("totalPendingReviews", pendingReviews.size());
+        enhancedTodoList.put("totalReferBackCases", referBackCases.size());
+        enhancedTodoList.put("totalOverdueCases", overdueCases.size());
+        enhancedTodoList.put("totalTasks", newAssignments.size() + pendingReviews.size() + referBackCases.size() + overdueCases.size());
+        
+        return ResponseEntity.ok(enhancedTodoList);
+    }
+
+    // Get KYC metrics with trends
+    @GetMapping("/dashboard/kyc-metrics")
+    public ResponseEntity<Map<String, Object>> getKycMetrics(Authentication authentication) {
+        String employeeEmail = authentication.getName();
+        List<Farmer> assignedFarmers = farmerService.getFarmersByEmployeeEmail(employeeEmail);
+        
+        long totalAssigned = assignedFarmers.size();
+        long approved = assignedFarmers.stream()
+            .filter(f -> f.getKycStatus() == Farmer.KycStatus.APPROVED)
+            .count();
+        long referBack = assignedFarmers.stream()
+            .filter(f -> f.getKycStatus() == Farmer.KycStatus.REFER_BACK)
+            .count();
+        long pending = assignedFarmers.stream()
+            .filter(f -> f.getKycStatus() == null || f.getKycStatus() == Farmer.KycStatus.PENDING)
+            .count();
+        long rejected = assignedFarmers.stream()
+            .filter(f -> f.getKycStatus() == Farmer.KycStatus.REJECTED)
+            .count();
+        
+        // Calculate completion rate
+        double completionRate = totalAssigned > 0 ? (double) approved / totalAssigned * 100 : 0;
+        
+        // Calculate average processing time (simplified)
+        double avgProcessingTime = assignedFarmers.stream()
+            .filter(f -> f.getKycReviewedDate() != null && f.getKycSubmittedDate() != null)
+            .mapToLong(f -> f.getKycReviewedDate().toEpochDay() - f.getKycSubmittedDate().toEpochDay())
+            .average()
+            .orElse(0);
+        
+        Map<String, Object> metrics = new HashMap<>();
+        metrics.put("totalAssigned", totalAssigned);
+        metrics.put("approved", approved);
+        metrics.put("referBack", referBack);
+        metrics.put("pending", pending);
+        metrics.put("rejected", rejected);
+        metrics.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
+        metrics.put("avgProcessingTime", Math.round(avgProcessingTime * 100.0) / 100.0);
+        metrics.put("efficiencyScore", calculateEfficiencyScore(approved, pending, referBack, totalAssigned));
+        
+        return ResponseEntity.ok(metrics);
+    }
+
+    private double calculateEfficiencyScore(long approved, long pending, long referBack, long total) {
+        if (total == 0) return 0;
+        
+        // Simple efficiency calculation: (approved - referBack) / total * 100
+        double score = ((double) (approved - referBack) / total) * 100;
+        return Math.max(0, Math.min(100, score)); // Clamp between 0 and 100
+    }
+
+    // Get farmer details for KYC review
+    @GetMapping("/dashboard/farmers/{farmerId}/kyc-details")
+    public ResponseEntity<Map<String, Object>> getFarmerKycDetails(@PathVariable Long farmerId, Authentication authentication) {
+        String employeeEmail = authentication.getName();
+        List<Farmer> assignedFarmers = farmerService.getFarmersByEmployeeEmail(employeeEmail);
+        
+        Farmer farmer = assignedFarmers.stream()
+            .filter(f -> f.getId().equals(farmerId))
+            .findFirst()
+            .orElse(null);
+        
+        if (farmer == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Map<String, Object> farmerDetails = new HashMap<>();
+        farmerDetails.put("id", farmer.getId());
+        farmerDetails.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+        farmerDetails.put("contactNumber", farmer.getContactNumber());
+        farmerDetails.put("state", farmer.getState());
+        farmerDetails.put("district", farmer.getDistrict());
+        farmerDetails.put("village", farmer.getVillage());
+        farmerDetails.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+        farmerDetails.put("kycSubmittedDate", farmer.getKycSubmittedDate());
+        farmerDetails.put("kycReviewedDate", farmer.getKycReviewedDate());
+        farmerDetails.put("kycRejectionReason", farmer.getKycRejectionReason());
+        farmerDetails.put("kycReferBackReason", farmer.getKycReferBackReason());
+        farmerDetails.put("kycReviewedBy", farmer.getKycReviewedBy());
+        
+        // Add document information
+        farmerDetails.put("photoFileName", farmer.getPhotoFileName());
+        farmerDetails.put("passbookFileName", farmer.getPassbookFileName());
+        farmerDetails.put("documentFileName", farmer.getDocumentFileName());
+        farmerDetails.put("soilTestCertificateFileName", farmer.getSoilTestCertificateFileName());
+        
+        return ResponseEntity.ok(farmerDetails);
     }
 
     // ✅ View Employee Details

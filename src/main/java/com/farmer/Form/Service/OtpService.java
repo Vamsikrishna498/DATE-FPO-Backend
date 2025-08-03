@@ -1,6 +1,7 @@
 package com.farmer.Form.Service;
  
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
  
 import java.time.Instant;
@@ -24,6 +25,14 @@ public class OtpService {
     // ───── Configuration ─────
     private static final long OTP_EXPIRY_MS      = 10 * 60 * 1_000; // 10 minutes
     private static final long RESEND_COOLDOWN_MS = 30 * 1_000;      // 30 seconds
+ 
+    // ───── Dependencies ─────
+    private final EmailService emailService;
+ 
+    @Autowired
+    public OtpService(EmailService emailService) {
+        this.emailService = emailService;
+    }
  
     // ───── Internal Store ─────
     private record OtpEntry(String otp, long issuedAt) {}
@@ -123,10 +132,19 @@ public class OtpService {
     }
  
     /**
-     * Stub: Replace this with actual email service (e.g., SendGrid, SMTP).
+     * Send OTP email using EmailService.
      */
     private void sendOtpEmail(String to, String otp) {
-        log.info("📧 (stub) Sending OTP email to '{}': {}", to, otp);
+        try {
+            // Log the OTP for development/testing
+            log.info("📧 OTP for '{}': {}", to, otp);
+            
+            // Send actual email (will work when email is configured)
+            emailService.sendOtpEmail(to, "Your OTP is: " + otp + ". It is valid for 10 minutes.");
+        } catch (Exception e) {
+            log.error("Failed to send OTP email to {}: {}", to, e.getMessage());
+            // Don't throw - OTP is still generated and stored
+        }
     }
 }
  

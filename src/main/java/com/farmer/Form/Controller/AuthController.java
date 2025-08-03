@@ -24,6 +24,7 @@ import com.farmer.Form.Service.OtpService;
 import com.farmer.Form.Service.UserService;
 import com.farmer.Form.security.JwtUtil;
 import com.farmer.Form.exception.UserNotApprovedException;
+import com.farmer.Form.exception.UserAlreadyExistsException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -81,27 +82,79 @@ public class AuthController {
     // ✅ REGISTER
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> registerUser(@Valid @RequestBody UserDTO userDTO) {
-        userService.registerUser(userDTO);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Registration successful - waiting for approval");
-        return ResponseEntity.ok(response);
+        try {
+            userService.registerUser(userDTO);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Registration successful - waiting for approval");
+            return ResponseEntity.ok(response);
+        } catch (UserAlreadyExistsException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (IllegalStateException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            Map<String, String> error = new HashMap<>();
+            String message = "Registration failed: ";
+            if (e.getMessage().contains("phone_number")) {
+                message += "Phone number already registered. Please use a different phone number.";
+            } else if (e.getMessage().contains("email")) {
+                message += "Email already registered. Please use a different email address.";
+            } else {
+                message += "Duplicate data detected. Please check your information.";
+            }
+            error.put("message", message);
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Registration failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     // ✅ REGISTER WITH ROLE (for Employee and Farmer registrations)
     @PostMapping("/register-with-role")
     public ResponseEntity<Map<String, String>> registerUserWithRole(@Valid @RequestBody UserDTO userDTO) {
-        // Validate that only EMPLOYEE or FARMER roles are allowed for this endpoint
-        String role = userDTO.getRole().toUpperCase();
-        if (!role.equals("EMPLOYEE") && !role.equals("FARMER")) {
+        try {
+            // Validate that only EMPLOYEE or FARMER roles are allowed for this endpoint
+            String role = userDTO.getRole().toUpperCase();
+            if (!role.equals("EMPLOYEE") && !role.equals("FARMER")) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Only EMPLOYEE and FARMER roles are allowed for this registration endpoint");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            userService.registerUserWithRole(userDTO);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Registration successful - waiting for approval");
+            return ResponseEntity.ok(response);
+        } catch (UserAlreadyExistsException e) {
             Map<String, String> error = new HashMap<>();
-            error.put("message", "Only EMPLOYEE and FARMER roles are allowed for this registration endpoint");
+            error.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(error);
+        } catch (IllegalStateException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            Map<String, String> error = new HashMap<>();
+            String message = "Registration failed: ";
+            if (e.getMessage().contains("phone_number")) {
+                message += "Phone number already registered. Please use a different phone number.";
+            } else if (e.getMessage().contains("email")) {
+                message += "Email already registered. Please use a different email address.";
+            } else {
+                message += "Duplicate data detected. Please check your information.";
+            }
+            error.put("message", message);
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Registration failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
-        
-        userService.registerUserWithRole(userDTO);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Registration successful - waiting for approval");
-        return ResponseEntity.ok(response);
     }
 
     // ✅ Simplified registration for role-based registration
@@ -164,13 +217,13 @@ public class AuthController {
 
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        if (email == null || email.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
+        String emailOrPhone = body.get("emailOrPhone");
+        if (emailOrPhone == null || emailOrPhone.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email or phone number is required"));
         }
         try {
-            String otp = otpService.generateAndSendOtp(email);
-            return ResponseEntity.ok(Map.of("message", "OTP re-sent successfully to " + email));
+            String otp = otpService.generateAndSendOtp(emailOrPhone);
+            return ResponseEntity.ok(Map.of("message", "OTP re-sent successfully to " + emailOrPhone));
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("message", ex.getMessage()));
         } catch (Exception ex) {
@@ -386,5 +439,25 @@ public class AuthController {
     @GetMapping("/test-registration")
     public String testRegistration() {
         return "Registration endpoint is accessible.";
+    }
+
+    // Test OTP endpoint for debugging
+    @PostMapping("/test-otp")
+    public ResponseEntity<Map<String, String>> testOtp(@RequestBody Map<String, String> request) {
+        String emailOrPhone = request.get("emailOrPhone");
+        if (emailOrPhone == null || emailOrPhone.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email or phone number is required."));
+        }
+        
+        try {
+            String otp = otpService.generateAndSendOtp(emailOrPhone.trim());
+            return ResponseEntity.ok(Map.of(
+                "message", "OTP sent successfully",
+                "otp", otp, // Only for testing - remove in production
+                "emailOrPhone", emailOrPhone
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }
