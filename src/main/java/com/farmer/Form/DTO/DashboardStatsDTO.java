@@ -19,4 +19,5 @@ public class DashboardStatsDTO {
     private Long pendingFarmers;
     private Long approvedEmployees;
     private Long approvedFarmers;
+    private Long kycApprovedFarmers;
 } 

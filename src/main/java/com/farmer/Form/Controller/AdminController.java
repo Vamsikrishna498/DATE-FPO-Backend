@@ -92,10 +92,24 @@ public class AdminController {
         List<Map<String, Object>> farmersWithKyc = farmers.stream().map(farmer -> {
             Map<String, Object> farmerData = new HashMap<>();
             farmerData.put("id", farmer.getId());
+            farmerData.put("firstName", farmer.getFirstName());
+            farmerData.put("middleName", farmer.getMiddleName());
+            farmerData.put("lastName", farmer.getLastName());
             farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+            farmerData.put("dateOfBirth", farmer.getDateOfBirth() != null ? farmer.getDateOfBirth().toString() : null);
+            farmerData.put("gender", farmer.getGender());
             farmerData.put("contactNumber", farmer.getContactNumber());
+            farmerData.put("email", ""); // Farmer entity doesn't have email field
+            farmerData.put("fatherName", farmer.getFatherName());
+            farmerData.put("nationality", farmer.getNationality());
+            farmerData.put("alternativeContactNumber", farmer.getAlternativeContactNumber());
+            farmerData.put("alternativeRelationType", farmer.getAlternativeRelationType());
             farmerData.put("state", farmer.getState());
             farmerData.put("district", farmer.getDistrict());
+            farmerData.put("country", farmer.getCountry());
+            farmerData.put("block", farmer.getBlock());
+            farmerData.put("village", farmer.getVillage());
+            farmerData.put("pincode", farmer.getPincode());
             farmerData.put("kycStatus", farmer.getKycApproved() != null ? 
                 (farmer.getKycApproved() ? "APPROVED" : "PENDING") : "NOT_STARTED");
             farmerData.put("assignedEmployee", farmer.getAssignedEmployee() != null ? 
@@ -106,6 +120,8 @@ public class AdminController {
         }).collect(Collectors.toList());
         return ResponseEntity.ok(farmersWithKyc);
     }
+
+    // Note: single farmer by id endpoint already exists above: getFarmerById(Long id)
 
     // Get all employees with assignment statistics
     @GetMapping("/employees-with-stats")

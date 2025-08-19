@@ -4,6 +4,7 @@ package com.farmer.Form.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.farmer.Form.DTO.FarmerDTO;
+import com.farmer.Form.DTO.FarmerDashboardDTO;
 import com.farmer.Form.Entity.Farmer;
 import com.farmer.Form.Repository.FarmerRepository;
 
@@ -53,5 +54,9 @@ public interface FarmerService {
     void approveKycByEmployee(Long farmerId, String employeeEmail);
     void referBackKyc(Long farmerId, String employeeEmail, String reason);
     void rejectKyc(Long farmerId, String employeeEmail, String reason);
+    
+    // Farmer Dashboard Methods
+    FarmerDashboardDTO getFarmerDashboardData(Long farmerId);
+    FarmerDashboardDTO getFarmerDashboardDataByEmail(String email);
 }
  

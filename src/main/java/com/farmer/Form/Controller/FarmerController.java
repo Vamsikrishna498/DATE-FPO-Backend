@@ -1,6 +1,7 @@
 package com.farmer.Form.Controller;
 
 import com.farmer.Form.DTO.FarmerDTO;
+import com.farmer.Form.DTO.FarmerDashboardDTO;
 import com.farmer.Form.DTO.PincodeApiResponse.PostOffice;
 import com.farmer.Form.Service.AddressService;
 import com.farmer.Form.Service.FarmerService;
@@ -93,5 +94,17 @@ public class FarmerController {
     public ResponseEntity<PostOffice> getAddressByPincode(@PathVariable String pincode) {
         PostOffice postOffice = addressService.fetchAddressByPincode(pincode);
         return postOffice != null ? ResponseEntity.ok(postOffice) : ResponseEntity.notFound().build();
+    }
+
+    // ✅ Get farmer dashboard data
+    @GetMapping("/dashboard/{farmerId}")
+    public ResponseEntity<FarmerDashboardDTO> getFarmerDashboard(@PathVariable Long farmerId) {
+        return ResponseEntity.ok(service.getFarmerDashboardData(farmerId));
+    }
+
+    // ✅ Get farmer dashboard data by email
+    @GetMapping("/dashboard/by-email")
+    public ResponseEntity<FarmerDashboardDTO> getFarmerDashboardByEmail(@RequestParam String email) {
+        return ResponseEntity.ok(service.getFarmerDashboardDataByEmail(email));
     }
 }

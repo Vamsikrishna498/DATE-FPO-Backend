@@ -30,8 +30,11 @@ public class JwtUtil {
     public String generateToken(Authentication authentication) {
         String username = authentication.getName();
  
-        // Get roles from authorities
-        List<String> roles = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
+        // Get roles from authorities and remove ROLE_ prefix for storage
+        List<String> roles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .map(authority -> authority.replace("ROLE_", ""))
+                .toList();
  
         // Create claims
         Map<String, Object> claims = new HashMap<>();

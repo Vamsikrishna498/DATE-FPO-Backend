@@ -1,9 +1,13 @@
 package com.farmer.Form.Service.Impl;
 
 import com.farmer.Form.DTO.FarmerDTO;
+import com.farmer.Form.DTO.FarmerDashboardDTO;
+import com.farmer.Form.DTO.EmployeeAssignmentDTO;
 import com.farmer.Form.Entity.Farmer;
+import com.farmer.Form.Entity.Employee;
 import com.farmer.Form.Mapper.FarmerMapper;
 import com.farmer.Form.Repository.FarmerRepository;
+import com.farmer.Form.Repository.EmployeeRepository;
 import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.FileStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -247,5 +251,145 @@ public class FarmerServiceImpl implements FarmerService {
         farmer.setKycReferBackReason(null);
         
         farmerRepository.save(farmer);
+    }
+
+    @Override
+    public FarmerDashboardDTO getFarmerDashboardData(Long farmerId) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        
+        return buildFarmerDashboardDTO(farmer);
+    }
+
+    @Override
+    public FarmerDashboardDTO getFarmerDashboardDataByEmail(String email) {
+        // This would need a repository method to find farmer by email
+        // For now, we'll need to implement this based on your user-farmer relationship
+        throw new UnsupportedOperationException("Method not implemented yet");
+    }
+
+    private FarmerDashboardDTO buildFarmerDashboardDTO(Farmer farmer) {
+        EmployeeAssignmentDTO assignedEmployee = null;
+        if (farmer.getAssignedEmployee() != null) {
+            Employee emp = farmer.getAssignedEmployee();
+            assignedEmployee = EmployeeAssignmentDTO.builder()
+                    .employeeId(emp.getId())
+                    .employeeName(emp.getFirstName() + " " + emp.getLastName())
+                    .employeeEmail(emp.getEmail())
+                    .employeeContactNumber(emp.getContactNumber())
+                    .employeeDesignation(emp.getRole())
+                    .employeeRole(emp.getRole())
+                    .assignmentStatus("ACTIVE")
+                    .build();
+        }
+
+        return FarmerDashboardDTO.builder()
+                // Personal Information
+                .salutation(farmer.getSalutation())
+                .firstName(farmer.getFirstName())
+                .middleName(farmer.getMiddleName())
+                .lastName(farmer.getLastName())
+                .fullName(farmer.getSalutation() + " " + farmer.getFirstName() + " " + 
+                         (farmer.getMiddleName() != null ? farmer.getMiddleName() + " " : "") + 
+                         farmer.getLastName())
+                .dateOfBirth(farmer.getDateOfBirth())
+                .gender(farmer.getGender())
+                .fatherName(farmer.getFatherName())
+                .contactNumber(farmer.getContactNumber())
+                .alternativeRelationType(farmer.getAlternativeRelationType())
+                .alternativeContactNumber(farmer.getAlternativeContactNumber())
+                .nationality(farmer.getNationality())
+                
+                // Address Information
+                .country(farmer.getCountry())
+                .state(farmer.getState())
+                .district(farmer.getDistrict())
+                .block(farmer.getBlock())
+                .village(farmer.getVillage())
+                .pincode(farmer.getPincode())
+                
+                // Professional Information
+                .education(farmer.getEducation())
+                .experience(farmer.getExperience())
+                
+                // Current Crop Information
+                .currentSurveyNumber(farmer.getCurrentSurveyNumber())
+                .currentLandHolding(farmer.getCurrentLandHolding())
+                .currentGeoTag(farmer.getCurrentGeoTag())
+                .currentCrop(farmer.getCurrentCrop())
+                .currentNetIncome(farmer.getCurrentNetIncome())
+                .currentSoilTest(farmer.getCurrentSoilTest())
+                .currentWaterSource(farmer.getCurrentWaterSource())
+                .currentDischargeLPH(farmer.getCurrentDischargeLPH())
+                .currentSummerDischarge(farmer.getCurrentSummerDischarge())
+                .currentBorewellLocation(farmer.getCurrentBorewellLocation())
+                
+                // Proposed Crop Information
+                .proposedSurveyNumber(farmer.getProposedSurveyNumber())
+                .proposedLandHolding(farmer.getProposedLandHolding())
+                .proposedGeoTag(farmer.getProposedGeoTag())
+                .proposedCrop(farmer.getProposedCrop())
+                .proposedNetIncome(farmer.getProposedNetIncome())
+                .proposedSoilTest(farmer.getProposedSoilTest())
+                .proposedWaterSource(farmer.getProposedWaterSource())
+                .proposedDischargeLPH(farmer.getProposedDischargeLPH())
+                .proposedSummerDischarge(farmer.getProposedSummerDischarge())
+                .proposedBorewellLocation(farmer.getProposedBorewellLocation())
+                
+                // Bank Details
+                .bankName(farmer.getBankName())
+                .accountNumber(farmer.getAccountNumber())
+                .branchName(farmer.getBranchName())
+                .ifscCode(farmer.getIfscCode())
+                
+                // Document Information
+                .documentType(farmer.getDocumentType())
+                .documentNumber(farmer.getDocumentNumber())
+                
+                // Portal Information
+                .portalRole(farmer.getPortalRole())
+                .portalAccess(farmer.getPortalAccess())
+                
+                // KYC Information
+                .kycApproved(farmer.getKycApproved())
+                .kycStatus(farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING")
+                .kycRejectionReason(farmer.getKycRejectionReason())
+                .kycReferBackReason(farmer.getKycReferBackReason())
+                .kycSubmittedDate(farmer.getKycSubmittedDate())
+                .kycReviewedDate(farmer.getKycReviewedDate())
+                .kycReviewedBy(farmer.getKycReviewedBy())
+                
+                // Assigned Employee Information
+                .assignedEmployee(assignedEmployee)
+                
+                // File Information
+                .photoFileName(farmer.getPhotoFileName())
+                .passbookFileName(farmer.getPassbookFileName())
+                .documentFileName(farmer.getDocumentFileName())
+                .soilTestCertificateFileName(farmer.getSoilTestCertificateFileName())
+                
+                // Statistics (placeholder values - would need to be calculated)
+                .totalCrops(calculateTotalCrops(farmer))
+                .pendingDocuments(calculatePendingDocuments(farmer))
+                .totalBenefitsReceived(0.0) // Would need to be calculated from benefits table
+                .registrationDate(LocalDate.now()) // Would need to be stored in farmer entity
+                .lastUpdatedDate(LocalDate.now()) // Would need to be stored in farmer entity
+                .build();
+    }
+
+    private Integer calculateTotalCrops(Farmer farmer) {
+        int count = 0;
+        if (farmer.getCurrentCrop() != null && !farmer.getCurrentCrop().isEmpty()) count++;
+        if (farmer.getProposedCrop() != null && !farmer.getProposedCrop().isEmpty()) count++;
+        return count;
+    }
+
+    private Integer calculatePendingDocuments(Farmer farmer) {
+        int count = 0;
+        if (farmer.getPhotoFileName() == null) count++;
+        if (farmer.getPassbookFileName() == null) count++;
+        if (farmer.getDocumentFileName() == null) count++;
+        if (farmer.getSoilTestCertificateFileName() == null) count++;
+        return count;
     }
 }

@@ -9,4 +9,6 @@ public interface FarmerRepository extends JpaRepository<Farmer, Long> {
     List<Farmer> findByAssignedEmployee_Email(String email);
     List<Farmer> findByAssignedEmployeeIsNull();
     List<Farmer> findByAssignedEmployee_Id(Long employeeId);
+    List<Farmer> findByDistrictContainingIgnoreCase(String district);
+    Long countByKycApprovedTrue();
 }

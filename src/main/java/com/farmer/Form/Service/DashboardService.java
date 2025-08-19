@@ -8,6 +8,8 @@ import com.farmer.Form.Entity.User;
 import com.farmer.Form.Entity.Role;
 import com.farmer.Form.Entity.UserStatus;
 import com.farmer.Form.Entity.KycStatus;
+import com.farmer.Form.Entity.Farmer;
+import com.farmer.Form.Repository.FarmerRepository;
 import com.farmer.Form.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,19 +26,24 @@ import java.util.List;
 public class DashboardService {
     
     private final UserRepository userRepository;
+    private final FarmerRepository farmerRepository;
     
     // Super Admin Dashboard Stats
     public DashboardStatsDTO getSuperAdminDashboardStats() {
+        long totalFarmers = farmerRepository.count();
+        long kycApprovedFarmers = farmerRepository.countByKycApprovedTrue();
+        long pendingKycFarmers = Math.max(0, totalFarmers - kycApprovedFarmers);
         DashboardStatsDTO stats = DashboardStatsDTO.builder()
-            .totalFarmers(userRepository.countByRole(Role.FARMER))
+            .totalFarmers(totalFarmers)
             .totalEmployees(userRepository.countByRole(Role.EMPLOYEE))
             .pendingUsers(userRepository.countByStatus(UserStatus.PENDING))
             .approvedUsers(userRepository.countByStatus(UserStatus.APPROVED))
             .totalFPO(userRepository.countByRole(Role.FPO))
             .pendingEmployees(userRepository.countByRoleAndStatus(Role.EMPLOYEE, UserStatus.PENDING))
-            .pendingFarmers(userRepository.countByRoleAndStatus(Role.FARMER, UserStatus.PENDING))
+            .pendingFarmers(pendingKycFarmers)
             .approvedEmployees(userRepository.countByRoleAndStatus(Role.EMPLOYEE, UserStatus.APPROVED))
             .approvedFarmers(userRepository.countByRoleAndStatus(Role.FARMER, UserStatus.APPROVED))
+            .kycApprovedFarmers(kycApprovedFarmers)
             .build();
         return stats;
     }

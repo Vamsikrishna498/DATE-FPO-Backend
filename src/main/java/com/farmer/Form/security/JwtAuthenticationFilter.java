@@ -34,8 +34,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Define a list of public URLs
-        String[] publicUrls = { "/api/auth", "/error" };
+        // Define a list of public URLs (no token required)
+        String[] publicUrls = {
+            "/api/auth",
+            "/api/public",
+            "/api/super-admin/dashboard",
+            "/api/admin/farmers-with-kyc",
+            "/error"
+        };
 
         // Get the requested URL
         String requestUri = request.getRequestURI();

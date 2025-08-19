@@ -230,9 +230,7 @@ const SuperAdminDashboard = () => {
             <button className="action-btn generate-report">
               📊 Generate Report
             </button>
-            <button className="action-btn view-analytics">
-              📈 View Analytics
-            </button>
+
           </div>
         </div>
       </div>
