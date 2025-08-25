@@ -171,12 +171,29 @@ public class FarmerServiceImpl implements FarmerService {
 
     @Override
     public void assignFarmerToEmployee(Long farmerId, Long employeeId) {
+        System.out.println("🔍 Assigning farmer " + farmerId + " to employee " + employeeId);
+        
         Farmer farmer = farmerRepository.findById(farmerId)
             .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        System.out.println("🔍 Found farmer: " + farmer.getFirstName() + " " + farmer.getLastName());
+        
         com.farmer.Form.Entity.Employee employee = employeeRepository.findById(employeeId)
             .orElseThrow(() -> new RuntimeException("Employee not found"));
+        System.out.println("🔍 Found employee: " + employee.getFirstName() + " " + employee.getLastName());
+        
         farmer.setAssignedEmployee(employee);
-        farmerRepository.save(farmer);
+        System.out.println("🔍 Set assignedEmployee on farmer");
+        
+        Farmer savedFarmer = farmerRepository.save(farmer);
+        System.out.println("🔍 Saved farmer with assignedEmployee: " + (savedFarmer.getAssignedEmployee() != null ? savedFarmer.getAssignedEmployee().getEmail() : "null"));
+        
+        // Verify the assignment was saved
+        Farmer verifyFarmer = farmerRepository.findById(farmerId).orElse(null);
+        if (verifyFarmer != null && verifyFarmer.getAssignedEmployee() != null) {
+            System.out.println("✅ Assignment verified: Farmer " + verifyFarmer.getId() + " assigned to " + verifyFarmer.getAssignedEmployee().getEmail());
+        } else {
+            System.err.println("❌ Assignment verification failed: Farmer " + farmerId + " has no assigned employee");
+        }
     }
 
     @Override

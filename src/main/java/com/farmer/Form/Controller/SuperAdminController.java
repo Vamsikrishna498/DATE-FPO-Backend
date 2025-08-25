@@ -18,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import com.farmer.Form.Entity.Role;
 
 @RestController
@@ -103,8 +104,39 @@ public class SuperAdminController {
 
     // --- FARMER CRUD ---
     @GetMapping("/farmers")
-    public ResponseEntity<List<Farmer>> getAllFarmers() {
-        return ResponseEntity.ok(farmerService.getAllFarmersRaw());
+    public ResponseEntity<List<Map<String, Object>>> getAllFarmers() {
+        List<Farmer> farmers = farmerService.getAllFarmersRaw();
+        List<Map<String, Object>> farmersData = farmers.stream().map(farmer -> {
+            Map<String, Object> farmerData = new HashMap<>();
+            farmerData.put("id", farmer.getId());
+            farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+            farmerData.put("firstName", farmer.getFirstName());
+            farmerData.put("lastName", farmer.getLastName());
+            farmerData.put("contactNumber", farmer.getContactNumber());
+            farmerData.put("email", ""); // Farmer entity doesn't have email
+            farmerData.put("state", farmer.getState());
+            farmerData.put("district", farmer.getDistrict());
+            farmerData.put("village", farmer.getVillage());
+            farmerData.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+            farmerData.put("kycApproved", farmer.getKycApproved());
+            farmerData.put("accessStatus", "ACTIVE"); // Default status
+            
+            // Handle assignedEmployee - convert to string if present
+            if (farmer.getAssignedEmployee() != null) {
+                Employee emp = farmer.getAssignedEmployee();
+                farmerData.put("assignedEmployee", emp.getFirstName() + " " + emp.getLastName());
+                farmerData.put("assignedEmployeeId", emp.getId());
+                farmerData.put("assignedEmployeeEmail", emp.getEmail());
+            } else {
+                farmerData.put("assignedEmployee", "Not Assigned");
+                farmerData.put("assignedEmployeeId", null);
+                farmerData.put("assignedEmployeeEmail", null);
+            }
+            
+            return farmerData;
+        }).collect(Collectors.toList());
+        
+        return ResponseEntity.ok(farmersData);
     }
 
     @GetMapping("/farmers/{id}")
@@ -126,6 +158,52 @@ public class SuperAdminController {
     public ResponseEntity<String> deleteFarmer(@PathVariable Long id) {
         farmerService.deleteFarmerBySuperAdmin(id);
         return ResponseEntity.ok("Farmer deleted successfully");
+    }
+
+    // --- BULK ASSIGN FARMERS TO EMPLOYEE ---
+    @PostMapping("/bulk-assign-farmers")
+    public ResponseEntity<Map<String, Object>> bulkAssignFarmers(@RequestBody Map<String, Object> request) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Long> farmerIds = (List<Long>) request.get("farmerIds");
+            Long employeeId = Long.valueOf(request.get("employeeId").toString());
+            
+            if (farmerIds == null || farmerIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "No farmer IDs provided"));
+            }
+            
+            int assignedCount = 0;
+            for (Long farmerId : farmerIds) {
+                try {
+                    farmerService.assignFarmerToEmployee(farmerId, employeeId);
+                    assignedCount++;
+                } catch (Exception e) {
+                    System.err.println("Error assigning farmer " + farmerId + ": " + e.getMessage());
+                }
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Farmers assigned successfully");
+            response.put("assignedCount", assignedCount);
+            response.put("totalRequested", farmerIds.size());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("Error in bulk assignment: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to assign farmers: " + e.getMessage()));
+        }
+    }
+
+    // --- SINGLE ASSIGN FARMER TO EMPLOYEE ---
+    @PostMapping("/assign-farmer")
+    public ResponseEntity<String> assignFarmerToEmployee(@RequestParam Long farmerId, @RequestParam Long employeeId) {
+        try {
+            farmerService.assignFarmerToEmployee(farmerId, employeeId);
+            return ResponseEntity.ok("Farmer assigned to employee successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to assign farmer: " + e.getMessage());
+        }
     }
 
     // --- EMPLOYEE CRUD ---

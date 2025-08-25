@@ -24,8 +24,39 @@ public class AdminController {
 
     // --- FARMER CRUD ---
     @GetMapping("/farmers")
-    public ResponseEntity<List<Farmer>> getAllFarmers() {
-        return ResponseEntity.ok(farmerService.getAllFarmersRaw());
+    public ResponseEntity<List<Map<String, Object>>> getAllFarmers() {
+        List<Farmer> farmers = farmerService.getAllFarmersRaw();
+        List<Map<String, Object>> farmersData = farmers.stream().map(farmer -> {
+            Map<String, Object> farmerData = new HashMap<>();
+            farmerData.put("id", farmer.getId());
+            farmerData.put("name", farmer.getFirstName() + " " + farmer.getLastName());
+            farmerData.put("firstName", farmer.getFirstName());
+            farmerData.put("lastName", farmer.getLastName());
+            farmerData.put("contactNumber", farmer.getContactNumber());
+            farmerData.put("email", ""); // Farmer entity doesn't have email
+            farmerData.put("state", farmer.getState());
+            farmerData.put("district", farmer.getDistrict());
+            farmerData.put("village", farmer.getVillage());
+            farmerData.put("kycStatus", farmer.getKycStatus() != null ? farmer.getKycStatus().name() : "PENDING");
+            farmerData.put("kycApproved", farmer.getKycApproved());
+            farmerData.put("accessStatus", "ACTIVE"); // Default status
+            
+            // Handle assignedEmployee - convert to string if present
+            if (farmer.getAssignedEmployee() != null) {
+                Employee emp = farmer.getAssignedEmployee();
+                farmerData.put("assignedEmployee", emp.getFirstName() + " " + emp.getLastName());
+                farmerData.put("assignedEmployeeId", emp.getId());
+                farmerData.put("assignedEmployeeEmail", emp.getEmail());
+            } else {
+                farmerData.put("assignedEmployee", "Not Assigned");
+                farmerData.put("assignedEmployeeId", null);
+                farmerData.put("assignedEmployeeEmail", null);
+            }
+            
+            return farmerData;
+        }).collect(Collectors.toList());
+        
+        return ResponseEntity.ok(farmersData);
     }
 
     @GetMapping("/farmers/{id}")
