@@ -264,6 +264,28 @@ public class UserService {
         }
     }
 
+    // ✅ Approve user and assign role (Admin)
+    public void approveAndAssignRoleByAdmin(Long userId, String role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+        if (user.getStatus() != com.farmer.Form.Entity.UserStatus.PENDING) {
+            throw new IllegalStateException("User is not pending approval.");
+        }
+        String tempPassword = generateTempPassword();
+        user.setRole(com.farmer.Form.Entity.Role.valueOf(role.toUpperCase()));
+        user.setStatus(com.farmer.Form.Entity.UserStatus.APPROVED);
+        user.setPassword(passwordEncoder.encode(tempPassword));
+        user.setForcePasswordChange(true);
+        userRepository.save(user);
+        log.info("Admin approval: Attempting to send approval email to {}", user.getEmail());
+        try {
+            emailService.sendAccountApprovedEmail(user.getEmail(), user.getName(), tempPassword);
+            log.info("Admin approval: Approval email sent to {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Admin approval: Failed to send approval email: {}", e.getMessage());
+        }
+    }
+
     private String generateTempPassword() {
         // Simple temp password generator (customize as needed)
         return "Temp@" + (int)(Math.random() * 100000);

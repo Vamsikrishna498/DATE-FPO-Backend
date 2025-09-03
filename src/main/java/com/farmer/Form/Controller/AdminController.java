@@ -2,8 +2,13 @@ package com.farmer.Form.Controller;
 
 import com.farmer.Form.Entity.Farmer;
 import com.farmer.Form.Entity.Employee;
+import com.farmer.Form.Entity.User;
+import com.farmer.Form.Entity.Role;
+import com.farmer.Form.Entity.UserStatus;
 import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.EmployeeService;
+import com.farmer.Form.Service.UserService;
+import com.farmer.Form.Service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +26,84 @@ public class AdminController {
 
     private final FarmerService farmerService;
     private final EmployeeService employeeService;
+    private final UserService userService;
+    private final EmailService emailService;
+
+    // --- USER REGISTRATION APPROVAL ENDPOINTS ---
+    
+    // Get pending user registrations
+    @GetMapping("/pending-registrations")
+    public ResponseEntity<List<User>> getPendingRegistrations() {
+        List<User> pendingUsers = userService.getPendingUsersRaw();
+        return ResponseEntity.ok(pendingUsers);
+    }
+    
+    // Get approved users
+    @GetMapping("/approved-users")
+    public ResponseEntity<List<User>> getApprovedUsers() {
+        List<User> approvedUsers = userService.getApprovedUsersRaw();
+        return ResponseEntity.ok(approvedUsers);
+    }
+
+    // Get all registrations (Admin equivalent to SuperAdmin registration-list)
+    @GetMapping("/registration-list")
+    public ResponseEntity<List<User>> getRegistrationList() {
+        return ResponseEntity.ok(userService.getAllUsersRaw());
+    }
+
+    // Get registration list by status
+    @GetMapping("/registration-list/filter")
+    public ResponseEntity<List<User>> getRegistrationListByStatus(@RequestParam(required = false) String status) {
+        if (status == null || status.isEmpty() || status.equalsIgnoreCase("ALL")) {
+            return ResponseEntity.ok(userService.getAllUsersRaw());
+        } else if (status.equalsIgnoreCase("PENDING")) {
+            return ResponseEntity.ok(userService.getPendingUsersRaw());
+        } else if (status.equalsIgnoreCase("APPROVED")) {
+            return ResponseEntity.ok(userService.getApprovedUsersRaw());
+        } else if (status.equalsIgnoreCase("REJECTED")) {
+            return ResponseEntity.ok(userService.getRejectedUsersRaw());
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Search registrations
+    @GetMapping("/registration-list/search")
+    public ResponseEntity<List<User>> searchRegistrations(@RequestParam String query) {
+        // This would need to be implemented in UserService
+        // For now, return all users and let frontend filter
+        return ResponseEntity.ok(userService.getAllUsersRaw());
+    }
+    
+    // Approve user registration and assign role (Admin)
+    @PutMapping("/users/{id}/approve")
+    public ResponseEntity<String> approveUserRegistration(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String role = request.get("role");
+        if (role == null || role.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Role is required");
+        }
+        try {
+            userService.approveAndAssignRoleByAdmin(id, role.trim());
+            return ResponseEntity.ok("User approved and role assigned successfully. Credentials sent to user email.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+    
+    // Reject user registration
+    @PutMapping("/users/{id}/reject")
+    public ResponseEntity<String> rejectUserRegistration(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String reason = request.get("reason");
+        if (reason == null || reason.trim().isEmpty()) {
+            reason = "Rejected by Admin";
+        }
+        try {
+            userService.updateUserStatus(id, "REJECTED");
+            return ResponseEntity.ok("User registration rejected successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
 
     // --- FARMER CRUD ---
     @GetMapping("/farmers")
@@ -78,6 +161,24 @@ public class AdminController {
     public ResponseEntity<String> deleteFarmer(@PathVariable Long id) {
         farmerService.deleteFarmerBySuperAdmin(id);
         return ResponseEntity.ok("Farmer deleted successfully");
+    }
+
+    // NEW: Bulk delete farmers by IDs
+    @DeleteMapping("/farmers")
+    public ResponseEntity<Map<String, Object>> deleteFarmersBulk(@RequestParam("ids") List<Long> ids) {
+        int deleted = 0;
+        for (Long id : ids) {
+            try {
+                farmerService.deleteFarmerBySuperAdmin(id);
+                deleted++;
+            } catch (Exception e) {
+                // continue deleting others
+            }
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("requested", ids.size());
+        result.put("deleted", deleted);
+        return ResponseEntity.ok(result);
     }
 
     // --- EMPLOYEE CRUD ---

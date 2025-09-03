@@ -28,6 +28,9 @@ public class FarmerDTO {
     private String alternativeRelationType;
     private String alternativeContactNumber;
     private String nationality;
+    
+    // Login Information
+    private String email;
 
     private String country;
     private String state;

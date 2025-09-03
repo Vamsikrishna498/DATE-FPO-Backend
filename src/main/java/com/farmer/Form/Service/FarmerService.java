@@ -58,5 +58,6 @@ public interface FarmerService {
     // Farmer Dashboard Methods
     FarmerDashboardDTO getFarmerDashboardData(Long farmerId);
     FarmerDashboardDTO getFarmerDashboardDataByEmail(String email);
+    FarmerDTO getFarmerByEmail(String email);
 }
  

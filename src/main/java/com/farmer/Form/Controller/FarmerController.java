@@ -107,4 +107,10 @@ public class FarmerController {
     public ResponseEntity<FarmerDashboardDTO> getFarmerDashboardByEmail(@RequestParam String email) {
         return ResponseEntity.ok(service.getFarmerDashboardDataByEmail(email));
     }
+    
+    // ✅ Get farmer by email
+    @GetMapping("/by-email")
+    public ResponseEntity<FarmerDTO> getFarmerByEmail(@RequestParam String email) {
+        return ResponseEntity.ok(service.getFarmerByEmail(email));
+    }
 }

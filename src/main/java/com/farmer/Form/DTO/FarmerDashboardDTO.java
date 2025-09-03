@@ -25,6 +25,9 @@ public class FarmerDashboardDTO {
     private String alternativeContactNumber;
     private String nationality;
     
+    // Login Information
+    private String email;
+    
     // Address Information
     private String country;
     private String state;

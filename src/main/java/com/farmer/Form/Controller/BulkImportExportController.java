@@ -182,22 +182,6 @@ public class BulkImportExportController {
     }
 
     // Bulk Assignment Endpoints
-    @PostMapping("/assign/farmers-to-employee")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
-    public ResponseEntity<String> assignFarmersToEmployee(
-            @RequestParam("farmerIds") List<Long> farmerIds,
-            @RequestParam("employeeId") Long employeeId) {
-        
-        try {
-            bulkService.bulkAssignFarmersToEmployee(farmerIds, employeeId);
-            return ResponseEntity.ok("Farmers assigned successfully");
-        } catch (Exception e) {
-            log.error("Error assigning farmers to employee: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Assignment failed: " + e.getMessage());
-        }
-    }
-
     @PostMapping("/assign/farmers-by-location")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<String> assignFarmersByLocation(
@@ -215,21 +199,6 @@ public class BulkImportExportController {
             return ResponseEntity.ok("Farmers assigned by location successfully");
         } catch (Exception e) {
             log.error("Error assigning farmers by location: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Assignment failed: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/assign/farmers-round-robin")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
-    public ResponseEntity<String> assignFarmersRoundRobin(
-            @RequestParam("farmerIds") List<Long> farmerIds) {
-        
-        try {
-            bulkService.bulkAssignFarmersRoundRobin(farmerIds);
-            return ResponseEntity.ok("Farmers assigned using round-robin successfully");
-        } catch (Exception e) {
-            log.error("Error assigning farmers round-robin: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Assignment failed: " + e.getMessage());
         }

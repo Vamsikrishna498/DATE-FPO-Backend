@@ -18,19 +18,15 @@ public interface BulkImportExportService {
     byte[] downloadFarmerTemplate();
     byte[] downloadEmployeeTemplate();
     
-    // Assignment Operations
-    void bulkAssignFarmersToEmployee(List<Long> farmerIds, Long employeeId);
+    // Bulk Assignment
     void bulkAssignFarmersByLocation(String location, Long employeeId);
-    void bulkAssignFarmersRoundRobin(List<Long> farmerIds);
+    void bulkAssignFarmersByLocationToEmail(String location, String employeeEmail);
+    void bulkAssignFarmersByNames(java.util.List<String> farmerNames, String employeeEmail);
     
     // Status Operations
     BulkImportResponseDTO getImportStatus(String importId);
     List<BulkImportResponseDTO> getImportHistory(String userEmail);
 
-    // New: assignment by names and email
-    void bulkAssignFarmersByNames(java.util.List<String> farmerNames, String employeeEmail);
-    void bulkAssignFarmersByLocationToEmail(String location, String employeeEmail);
-    
     // Validation Operations
     List<ImportErrorDTO> validateFarmerData(List<String[]> data);
     List<ImportErrorDTO> validateEmployeeData(List<String[]> data);

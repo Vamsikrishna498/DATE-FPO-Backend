@@ -280,9 +280,19 @@ public class FarmerServiceImpl implements FarmerService {
 
     @Override
     public FarmerDashboardDTO getFarmerDashboardDataByEmail(String email) {
-        // This would need a repository method to find farmer by email
-        // For now, we'll need to implement this based on your user-farmer relationship
-        throw new UnsupportedOperationException("Method not implemented yet");
+        // Find farmer by email
+        Farmer farmer = farmerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Farmer not found with email: " + email));
+        
+        return buildFarmerDashboardDTO(farmer);
+    }
+    
+    @Override
+    public FarmerDTO getFarmerByEmail(String email) {
+        Farmer farmer = farmerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Farmer not found with email: " + email));
+        
+        return FarmerMapper.toDto(farmer);
     }
 
     private FarmerDashboardDTO buildFarmerDashboardDTO(Farmer farmer) {
@@ -316,6 +326,7 @@ public class FarmerServiceImpl implements FarmerService {
                 .alternativeRelationType(farmer.getAlternativeRelationType())
                 .alternativeContactNumber(farmer.getAlternativeContactNumber())
                 .nationality(farmer.getNationality())
+                .email(farmer.getEmail())
                 
                 // Address Information
                 .country(farmer.getCountry())

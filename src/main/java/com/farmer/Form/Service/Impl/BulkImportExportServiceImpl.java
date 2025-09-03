@@ -76,7 +76,9 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
         // Process asynchronously
         CompletableFuture.runAsync(() -> {
             try {
-                List<String[]> data = readFileData(file);
+                // Read the bytes up-front to avoid relying on Tomcat temp files after request ends
+                byte[] uploadedBytes = file.getBytes();
+                List<String[]> data = readFileData(uploadedBytes, file.getOriginalFilename());
                 List<ImportErrorDTO> errors = validateFarmerData(data);
                 
                 int totalRecords = data.size() - 1; // Exclude header
@@ -132,7 +134,8 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
         // Process asynchronously
         CompletableFuture.runAsync(() -> {
             try {
-                List<String[]> data = readFileData(file);
+                byte[] uploadedBytes = file.getBytes();
+                List<String[]> data = readFileData(uploadedBytes, file.getOriginalFilename());
                 List<ImportErrorDTO> errors = validateEmployeeData(data);
                 
                 int totalRecords = data.size() - 1; // Exclude header
@@ -215,86 +218,60 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
         return createTemplate(EMPLOYEE_HEADERS, "Employee_Template");
     }
 
+    // Bulk Assignment Methods
     @Override
-    public void bulkAssignFarmersToEmployee(List<Long> farmerIds, Long employeeId) {
+    public void bulkAssignFarmersByLocation(String location, Long employeeId) {
+        try {
+            List<Farmer> farmers = farmerRepository.findByDistrictIgnoreCase(location);
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
         
-        for (Long farmerId : farmerIds) {
-            try {
-                farmerService.assignFarmerToEmployee(farmerId, employeeId);
-            } catch (Exception e) {
-                log.error("Error assigning farmer {} to employee {}: {}", farmerId, employeeId, e.getMessage());
+            for (Farmer farmer : farmers) {
+                if (farmer.getAssignedEmployee() == null) {
+                    farmer.setAssignedEmployee(employee);
+                    farmerRepository.save(farmer);
+                }
             }
-        }
-    }
-
-    @Override
-    public void bulkAssignFarmersByLocation(String location, Long employeeId) {
-        List<Farmer> farmers = farmerRepository.findByDistrictContainingIgnoreCase(location);
-        for (Farmer farmer : farmers) {
-            try {
-                farmerService.assignFarmerToEmployee(farmer.getId(), employeeId);
             } catch (Exception e) {
-                log.error("Error assigning farmer {} to employee {}: {}", farmer.getId(), employeeId, e.getMessage());
-            }
+            log.error("Error in bulk assignment by location: {}", e.getMessage());
+            throw new RuntimeException("Bulk assignment failed: " + e.getMessage());
         }
     }
 
     @Override
     public void bulkAssignFarmersByLocationToEmail(String location, String employeeEmail) {
+        try {
         Employee employee = employeeRepository.findByEmail(employeeEmail)
-            .orElseThrow(() -> new RuntimeException("Employee not found for email: " + employeeEmail));
+                .orElseThrow(() -> new RuntimeException("Employee not found with email: " + employeeEmail));
         bulkAssignFarmersByLocation(location, employee.getId());
-    }
-
-    @Override
-    public void bulkAssignFarmersRoundRobin(List<Long> farmerIds) {
-        List<Employee> employees = employeeRepository.findByRole("FIELD_OFFICER");
-        if (employees.isEmpty()) {
-            throw new RuntimeException("No field officers found for assignment");
-        }
-        
-        int employeeIndex = 0;
-        for (Long farmerId : farmerIds) {
-            Employee employee = employees.get(employeeIndex % employees.size());
-            try {
-                farmerService.assignFarmerToEmployee(farmerId, employee.getId());
             } catch (Exception e) {
-                log.error("Error assigning farmer {} to employee {}: {}", farmerId, employee.getId(), e.getMessage());
-            }
-            employeeIndex++;
+            log.error("Error in bulk assignment by location to email: {}", e.getMessage());
+            throw new RuntimeException("Bulk assignment failed: " + e.getMessage());
         }
     }
 
     @Override
     public void bulkAssignFarmersByNames(List<String> farmerNames, String employeeEmail) {
+        try {
         Employee employee = employeeRepository.findByEmail(employeeEmail)
-            .orElseThrow(() -> new RuntimeException("Employee not found for email: " + employeeEmail));
-
-        if (farmerNames == null || farmerNames.isEmpty()) {
-            throw new RuntimeException("No farmer names provided");
-        }
-
-        // naive match by first + last name ignoring case and extra spaces
-        List<Farmer> all = farmerRepository.findAll();
-        for (String name : farmerNames) {
-            String normalized = name == null ? "" : name.trim().toLowerCase();
-            if (normalized.isEmpty()) continue;
-            Farmer match = all.stream().filter(f -> {
-                String full = ((f.getFirstName() == null ? "" : f.getFirstName()) + " " + (f.getLastName() == null ? "" : f.getLastName())).trim().toLowerCase();
-                return full.equals(normalized);
-            }).findFirst().orElse(null);
-
-            if (match != null) {
-                try {
-                    farmerService.assignFarmerToEmployee(match.getId(), employee.getId());
-                } catch (Exception e) {
-                    log.error("Failed to assign farmer {} to {}: {}", name, employeeEmail, e.getMessage());
+                .orElseThrow(() -> new RuntimeException("Employee not found with email: " + employeeEmail));
+            
+            for (String fullName : farmerNames) {
+                String[] nameParts = fullName.trim().split("\\s+", 2);
+                String firstName = nameParts[0];
+                String lastName = nameParts.length > 1 ? nameParts[1] : "";
+                
+                List<Farmer> farmers = farmerRepository.findByFirstNameIgnoreCaseAndLastNameIgnoreCase(firstName, lastName);
+                for (Farmer farmer : farmers) {
+                    if (farmer.getAssignedEmployee() == null) {
+                        farmer.setAssignedEmployee(employee);
+                        farmerRepository.save(farmer);
+                    }
                 }
-            } else {
-                log.warn("No farmer found for name: {}", name);
             }
+        } catch (Exception e) {
+            log.error("Error in bulk assignment by names: {}", e.getMessage());
+            throw new RuntimeException("Bulk assignment failed: " + e.getMessage());
         }
     }
 
@@ -412,10 +389,16 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
 
     // Helper methods
     private List<String[]> readFileData(MultipartFile file) throws IOException {
+        // Legacy path – keep for any synchronous callers
+        return readFileData(file.getBytes(), file.getOriginalFilename());
+    }
+
+    // New helper: operate on in-memory bytes so async processing does not depend on temp files
+    private List<String[]> readFileData(byte[] bytes, String originalFilename) throws IOException {
         List<String[]> data = new ArrayList<>();
-        
-        if (file.getOriginalFilename().toLowerCase().endsWith(".csv")) {
-            try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
+        String name = originalFilename == null ? "" : originalFilename.toLowerCase();
+        if (name.endsWith(".csv")) {
+            try (CSVReader reader = new CSVReader(new InputStreamReader(new ByteArrayInputStream(bytes)))) {
                 String[] line;
                 while ((line = reader.readNext()) != null) {
                     data.add(line);
@@ -424,7 +407,7 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
                 throw new IOException("Invalid CSV format", e);
             }
         } else {
-            try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(bytes))) {
                 Sheet sheet = workbook.getSheetAt(0);
                 for (Row row : sheet) {
                     String[] rowData = new String[row.getLastCellNum()];
@@ -686,8 +669,35 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
     }
 
     private List<Farmer> getFilteredFarmers(BulkExportRequestDTO request) {
-        // Implementation would filter farmers based on request criteria
-        return farmerRepository.findAll();
+        List<Farmer> farmers = farmerRepository.findAll();
+        // Filter by assigned employee email if provided
+        if (request.getAssignedEmployeeEmail() != null && !request.getAssignedEmployeeEmail().isBlank()) {
+            String email = request.getAssignedEmployeeEmail().trim().toLowerCase();
+            farmers = farmers.stream()
+                    .filter(f -> f.getAssignedEmployee() != null
+                            && f.getAssignedEmployee().getEmail() != null
+                            && f.getAssignedEmployee().getEmail().trim().toLowerCase().equals(email))
+                    .toList();
+        }
+        // Filter by location (district) if provided
+        if (request.getLocation() != null && !request.getLocation().isBlank()) {
+            String loc = request.getLocation().trim().toLowerCase();
+            farmers = farmers.stream()
+                    .filter(f -> f.getDistrict() != null && f.getDistrict().trim().toLowerCase().contains(loc))
+                    .toList();
+        }
+        // Filter by KYC status if provided
+        if (request.getKycStatus() != null && !request.getKycStatus().isBlank()) {
+            String status = request.getKycStatus().trim().toUpperCase();
+            farmers = farmers.stream()
+                    .filter(f -> {
+                        if (f.getKycStatus() == null) return "NOT_STARTED".equals(status);
+                        return f.getKycStatus().name().equalsIgnoreCase(status);
+                    })
+                    .toList();
+        }
+        // Date range filters can be applied when you add created/updated timestamps
+        return farmers;
     }
 
     private List<Employee> getFilteredEmployees(BulkExportRequestDTO request) {

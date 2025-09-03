@@ -35,6 +35,11 @@ public class Farmer {
     private String alternativeRelationType;
     @Pattern(regexp="^\\d{10}$") private String alternativeContactNumber;
     @NotBlank private String nationality;
+    
+    // Login Information
+    @Column(unique = true)
+    @Email(message = "Please provide a valid email address")
+    private String email;
 
     // Address
     @NotBlank private String country;
