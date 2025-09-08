@@ -18,6 +18,10 @@ import com.farmer.Form.DTO.UserResponseDTO;
 import com.farmer.Form.DTO.UserViewDTO;
 import com.farmer.Form.DTO.UserRegistrationDTO;
 import com.farmer.Form.Entity.User;
+import com.farmer.Form.Entity.FPO;
+import com.farmer.Form.Entity.FPOUser;
+import com.farmer.Form.Repository.FPORepository;
+import com.farmer.Form.Repository.FPOUserRepository;
 import com.farmer.Form.Service.CountryStateCityService;
 import com.farmer.Form.Service.EmailService;
 import com.farmer.Form.Service.OtpService;
@@ -41,6 +45,9 @@ public class AuthController {
     private final OtpService otpService;
     private final EmailService emailService;
     private final CountryStateCityService countryService;
+    private final FPOUserRepository fpoUserRepository;
+    private final FPORepository fpoRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     // ✅ LOGIN
     @PostMapping("/login")
@@ -77,6 +84,44 @@ public class AuthController {
             error.put("message", "Login failed: " + e.getMessage());
             return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body(error);
         }
+    }
+
+    // ✅ FPO LOGIN
+    @PostMapping("/fpo-login")
+    public ResponseEntity<?> fpoLogin(@RequestBody Map<String, String> req) {
+        String email = req.get("email");
+        String password = req.get("password");
+        
+        if (email == null || password == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email and password are required"));
+        }
+        
+        FPOUser user = fpoUserRepository.findByEmail(email).orElse(null);
+        if (user == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
+        }
+        
+        FPO fpo = user.getFpo();
+        
+        // Generate JWT token for FPO user
+        String token = jwtUtil.generateTokenForFPOUser(user);
+        
+        // Debug logging
+        System.out.println("FPO Login - User ID: " + user.getId());
+        System.out.println("FPO Login - User Email: " + user.getEmail());
+        System.out.println("FPO Login - FPO ID: " + (fpo != null ? fpo.getId() : "null"));
+        System.out.println("FPO Login - Generated Token: " + (token != null ? token.substring(0, Math.min(50, token.length())) + "..." : "null"));
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("message", "Login successful");
+        response.put("userId", user.getId());
+        response.put("email", user.getEmail());
+        response.put("role", user.getRole().name());
+        response.put("fpoId", fpo != null ? fpo.getId() : null);
+        response.put("fpoName", fpo != null ? fpo.getFpoName() : null);
+        
+        return ResponseEntity.ok(response);
     }
 
     // ✅ REGISTER

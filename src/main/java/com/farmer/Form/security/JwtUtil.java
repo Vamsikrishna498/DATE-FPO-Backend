@@ -10,6 +10,8 @@ import javax.crypto.SecretKey;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
+
+import com.farmer.Form.Entity.FPOUser;
  
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -69,5 +71,35 @@ public class JwtUtil {
     private boolean isTokenExpired(String token) {
         return extractClaims(token).getExpiration().before(new Date(System.currentTimeMillis()));
     }
- 
+
+    // Generate JWT token for FPO user
+    public String generateTokenForFPOUser(FPOUser fpoUser) {
+        try {
+            String username = fpoUser.getEmail();
+            
+            // Create claims
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("roles", java.util.Arrays.asList("FPO"));
+            claims.put("userId", fpoUser.getId());
+            claims.put("fpoId", fpoUser.getFpo() != null ? fpoUser.getFpo().getId() : null);
+            
+            String token = Jwts.builder()
+                    .claims(claims)
+                    .subject(username)
+                    .issuedAt(new Date())
+                    .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                    .signWith(getSigningKey())
+                    .compact();
+            
+            System.out.println("JWT Generation - Username: " + username);
+            System.out.println("JWT Generation - Token length: " + (token != null ? token.length() : "null"));
+            
+            return token;
+        } catch (Exception e) {
+            System.err.println("JWT Generation Error: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to generate JWT token for FPO user", e);
+        }
+    }
+
 }
