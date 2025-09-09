@@ -77,6 +77,20 @@ public class FPOController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE')")
+    public ResponseEntity<Void> updateFPOStatus(@PathVariable Long id, @RequestParam String status) {
+        log.info("Updating FPO status. id={}, status={}", id, status);
+        if ("ACTIVE".equalsIgnoreCase(status)) {
+            fpoService.activateFPO(id);
+        } else if ("INACTIVE".equalsIgnoreCase(status)) {
+            fpoService.deactivateFPO(id);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
     // FPO List and Search
     @PostMapping("/search")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
