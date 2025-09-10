@@ -34,6 +34,7 @@ public class EmployeeController {
     private final AddressService addressService;
     private final FileStorageService fileStorageService;
     private final FarmerService farmerService;
+    private final com.farmer.Form.Service.IdCardService idCardService;
  
     // ✅ Create employee with file upload
     @PostMapping
@@ -49,6 +50,17 @@ public class EmployeeController {
  
         } catch (IOException | MultipartException e) {
             return ResponseEntity.badRequest().body("❌ File upload failed: " + e.getMessage());
+        }
+    }
+
+    // ✅ Update employee photo only
+    @PatchMapping(value = "/{id}/photo", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Employee> updateEmployeePhoto(@PathVariable Long id, @RequestPart("photo") org.springframework.web.multipart.MultipartFile photo) {
+        try {
+            Employee updated = employeeService.updateEmployeePhoto(id, photo);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
         }
     }
  
@@ -576,6 +588,123 @@ public class EmployeeController {
         farmerDetails.put("soilTestCertificateFileName", farmer.getSoilTestCertificateFileName());
         
         return ResponseEntity.ok(farmerDetails);
+    }
+
+    // ✅ Allow employee to view ID card of their assigned farmer
+    @GetMapping("/dashboard/farmers/{farmerId}/id-card")
+    public ResponseEntity<Map<String, Object>> getAssignedFarmerIdCard(
+            @PathVariable Long farmerId,
+            Authentication authentication
+    ) {
+        String employeeEmail = authentication.getName();
+        List<Farmer> assignedFarmers = farmerService.getFarmersByEmployeeEmail(employeeEmail);
+        boolean isAssigned = assignedFarmers.stream().anyMatch(f -> f.getId().equals(farmerId));
+        if (!isAssigned) {
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("message", "You do not have access to this farmer's ID card");
+            return ResponseEntity.status(403).body(resp);
+        }
+
+        // Primary lookup by holderId
+        List<com.farmer.Form.Entity.IdCard> cards = idCardService.getByHolderId(String.valueOf(farmerId));
+        com.farmer.Form.Entity.IdCard card = cards.stream()
+                .filter(c -> c.getCardType() == com.farmer.Form.Entity.IdCard.CardType.FARMER)
+                .findFirst()
+                .orElse(null);
+
+        // Fallback: search by holder name if legacy cards were generated without numeric holderId
+        if (card == null) {
+            Farmer farmer = assignedFarmers.stream()
+                    .filter(f -> f.getId().equals(farmerId))
+                    .findFirst().orElse(null);
+            if (farmer != null) {
+                String nameQuery = ((farmer.getFirstName() != null ? farmer.getFirstName() : "") + " " +
+                        (farmer.getLastName() != null ? farmer.getLastName() : "")).trim();
+                try {
+                    // Fallback A: search by name for FARMER type
+                    org.springframework.data.domain.Page<com.farmer.Form.Entity.IdCard> pageA =
+                            idCardService.searchIdCardsByName(nameQuery,
+                                    com.farmer.Form.Entity.IdCard.CardType.FARMER,
+                                    org.springframework.data.domain.PageRequest.of(0, 20));
+                    card = pageA.getContent().stream()
+                            .filter(c -> c.getCardType() == com.farmer.Form.Entity.IdCard.CardType.FARMER)
+                            .findFirst().orElse(null);
+
+                    // Fallback B: sometimes type was saved wrongly; try EMPLOYEE too
+                    if (card == null) {
+                        org.springframework.data.domain.Page<com.farmer.Form.Entity.IdCard> pageB =
+                                idCardService.searchIdCardsByName(nameQuery,
+                                        com.farmer.Form.Entity.IdCard.CardType.EMPLOYEE,
+                                        org.springframework.data.domain.PageRequest.of(0, 20));
+                        card = pageB.getContent().stream().findFirst().orElse(null);
+                    }
+
+                    // Fallback C: scan a bigger page and match holder name contains
+                    if (card == null) {
+                        org.springframework.data.domain.Page<com.farmer.Form.Entity.IdCard> all =
+                                idCardService.getAllIdCards(org.springframework.data.domain.PageRequest.of(0, 1000));
+                        String nq = nameQuery.toLowerCase();
+                        card = all.getContent().stream()
+                                .filter(c -> c.getHolderName() != null && c.getHolderName().toLowerCase().contains(nq))
+                                .findFirst().orElse(null);
+                    }
+                } catch (Exception ignored) { }
+            }
+        }
+
+        if (card == null) {
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("message", "No ID card record found for this farmer");
+            return ResponseEntity.status(404).body(resp);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("cardId", card.getCardId());
+        response.put("status", card.getStatus());
+        response.put("holderId", card.getHolderId());
+        response.put("holderName", card.getHolderName());
+        response.put("pngUrl", "/api/id-cards/" + card.getCardId() + "/download/png");
+        response.put("pdfUrl", "/api/id-cards/" + card.getCardId() + "/download/pdf");
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ✅ Allow employee to generate ID card for an assigned farmer (if missing)
+    @PostMapping("/dashboard/farmers/{farmerId}/id-card")
+    public ResponseEntity<Map<String, Object>> generateAssignedFarmerIdCard(
+            @PathVariable Long farmerId,
+            Authentication authentication
+    ) {
+        String employeeEmail = authentication.getName();
+        List<Farmer> assignedFarmers = farmerService.getFarmersByEmployeeEmail(employeeEmail);
+        Farmer farmer = assignedFarmers.stream().filter(f -> f.getId().equals(farmerId)).findFirst().orElse(null);
+        if (farmer == null) {
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("message", "You do not have access to generate this farmer's ID card");
+            return ResponseEntity.status(403).body(resp);
+        }
+
+        try {
+            // If already exists, return existing
+            List<com.farmer.Form.Entity.IdCard> cards = idCardService.getByHolderId(String.valueOf(farmerId));
+            com.farmer.Form.Entity.IdCard existing = cards.stream()
+                    .filter(c -> c.getCardType() == com.farmer.Form.Entity.IdCard.CardType.FARMER)
+                    .findFirst().orElse(null);
+            com.farmer.Form.Entity.IdCard card = existing != null ? existing : idCardService.generateFarmerIdCard(farmer);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("cardId", card.getCardId());
+            response.put("status", card.getStatus());
+            response.put("holderId", card.getHolderId());
+            response.put("holderName", card.getHolderName());
+            response.put("pngUrl", "/api/id-cards/" + card.getCardId() + "/download/png");
+            response.put("pdfUrl", "/api/id-cards/" + card.getCardId() + "/download/pdf");
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("message", "Failed to generate ID card: " + e.getMessage());
+            return ResponseEntity.status(500).body(resp);
+        }
     }
 
     // ✅ View Employee Details

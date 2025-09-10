@@ -10,6 +10,7 @@ import com.farmer.Form.Repository.FarmerRepository;
 import com.farmer.Form.Repository.EmployeeRepository;
 import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.FileStorageService;
+import com.farmer.Form.Service.IdCardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,6 +32,9 @@ public class FarmerServiceImpl implements FarmerService {
     @Autowired
     private com.farmer.Form.Repository.EmployeeRepository employeeRepository;
 
+    @Autowired
+    private IdCardService idCardService;
+
     @Override
     public FarmerDTO createFarmer(FarmerDTO dto, MultipartFile photo, MultipartFile passbookPhoto,
                                   MultipartFile aadhaar, MultipartFile soilTestCertificate) {
@@ -50,6 +54,32 @@ public class FarmerServiceImpl implements FarmerService {
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to store uploaded files", e);
+        }
+    }
+
+    @Override
+    public FarmerDTO updateFarmerPhoto(Long id, MultipartFile photo) {
+        Farmer existing = farmerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        try {
+            String photoFile = (photo != null && !photo.isEmpty())
+                    ? fileStorageService.storeFile(photo, "photos")
+                    : existing.getPhotoFileName();
+
+            existing.setPhotoFileName(photoFile);
+            Farmer saved = farmerRepository.save(existing);
+            try {
+                List<com.farmer.Form.Entity.IdCard> cards = idCardService.getByHolderId(String.valueOf(saved.getId()));
+                com.farmer.Form.Entity.IdCard latestActive = cards.stream()
+                        .filter(c -> c.getStatus() == com.farmer.Form.Entity.IdCard.CardStatus.ACTIVE)
+                        .findFirst().orElse(cards.isEmpty() ? null : cards.get(0));
+                if (latestActive != null) {
+                    idCardService.regenerateIdCard(latestActive.getCardId());
+                }
+            } catch (Exception ignore) {}
+            return FarmerMapper.toDto(saved);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to update farmer photo", e);
         }
     }
 
@@ -206,7 +236,11 @@ public class FarmerServiceImpl implements FarmerService {
         Farmer farmer = farmerRepository.findById(farmerId)
             .orElseThrow(() -> new RuntimeException("Farmer not found"));
         farmer.setKycApproved(true);
+        farmer.setKycStatus(Farmer.KycStatus.APPROVED);
         farmerRepository.save(farmer);
+        
+        // Note: ID card generation is now handled in UserService during user approval
+        // No need to generate ID card here as it's done automatically when user is approved
     }
     
     // Enhanced KYC Management Methods
@@ -228,6 +262,9 @@ public class FarmerServiceImpl implements FarmerService {
         farmer.setKycReferBackReason(null);
         
         farmerRepository.save(farmer);
+        
+        // Note: ID card generation is now handled in UserService during user approval
+        // No need to generate ID card here as it's done automatically when user is approved
     }
     
     @Override
@@ -286,7 +323,7 @@ public class FarmerServiceImpl implements FarmerService {
         
         return buildFarmerDashboardDTO(farmer);
     }
-    
+
     @Override
     public FarmerDTO getFarmerByEmail(String email) {
         Farmer farmer = farmerRepository.findByEmail(email)
@@ -311,6 +348,7 @@ public class FarmerServiceImpl implements FarmerService {
         }
 
         return FarmerDashboardDTO.builder()
+                .id(farmer.getId())
                 // Personal Information
                 .salutation(farmer.getSalutation())
                 .firstName(farmer.getFirstName())

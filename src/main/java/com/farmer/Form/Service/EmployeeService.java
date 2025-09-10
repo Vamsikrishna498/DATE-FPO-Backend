@@ -41,5 +41,8 @@ public interface EmployeeService {
 
     // Get assigned farmers for employee
     List<com.farmer.Form.Entity.Farmer> getAssignedFarmersForEmployee(Long employeeId);
+
+    // Photo-only update for ID card refresh
+    com.farmer.Form.Entity.Employee updateEmployeePhoto(Long id, org.springframework.web.multipart.MultipartFile photo);
 }
  

@@ -21,6 +21,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
     import com.farmer.Form.Entity.Role;
+import com.farmer.Form.Service.IdCardService;
+import com.farmer.Form.Repository.FarmerRepository;
+import com.farmer.Form.Repository.EmployeeRepository;
  
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,9 @@ public class UserService {
     private final UserMapper userMapper;
     private final EmailService emailService;
     private final OtpService otpService;
+    private final IdCardService idCardService;
+    private final FarmerRepository farmerRepository;
+    private final EmployeeRepository employeeRepository;
  
     // ✅ Register a new user with OTP verification
     public User registerUser(UserDTO userDTO) {
@@ -255,6 +261,21 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(tempPassword));
         user.setForcePasswordChange(true);
         userRepository.save(user);
+        
+        // Generate ID card immediately after approval
+        try {
+            if ("FARMER".equalsIgnoreCase(role)) {
+                // Find the farmer record and generate ID card
+                generateFarmerIdCard(userId);
+            } else if ("EMPLOYEE".equalsIgnoreCase(role)) {
+                // Find the employee record and generate ID card
+                generateEmployeeIdCard(userId);
+            }
+            log.info("ID card generated successfully for user {} with role {}", userId, role);
+        } catch (Exception e) {
+            log.error("Failed to generate ID card for user {}: {}", userId, e.getMessage());
+        }
+        
         log.info("Attempting to send approval email to {}", user.getEmail());
         try {
             emailService.sendAccountApprovedEmail(user.getEmail(), user.getName(), tempPassword);
@@ -277,6 +298,21 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(tempPassword));
         user.setForcePasswordChange(true);
         userRepository.save(user);
+        
+        // Generate ID card immediately after approval
+        try {
+            if ("FARMER".equalsIgnoreCase(role)) {
+                // Find the farmer record and generate ID card
+                generateFarmerIdCard(userId);
+            } else if ("EMPLOYEE".equalsIgnoreCase(role)) {
+                // Find the employee record and generate ID card
+                generateEmployeeIdCard(userId);
+            }
+            log.info("Admin approval: ID card generated successfully for user {} with role {}", userId, role);
+        } catch (Exception e) {
+            log.error("Admin approval: Failed to generate ID card for user {}: {}", userId, e.getMessage());
+        }
+        
         log.info("Admin approval: Attempting to send approval email to {}", user.getEmail());
         try {
             emailService.sendAccountApprovedEmail(user.getEmail(), user.getName(), tempPassword);
@@ -289,6 +325,60 @@ public class UserService {
     private String generateTempPassword() {
         // Simple temp password generator (customize as needed)
         return "Temp@" + (int)(Math.random() * 100000);
+    }
+    
+    private void generateFarmerIdCard(Long userId) {
+        try {
+            // Find farmer by user ID (assuming farmer table has user_id or email reference)
+            // You may need to adjust this based on your database relationship
+            com.farmer.Form.Entity.Farmer farmer = findFarmerByUserId(userId);
+            if (farmer != null) {
+                idCardService.generateFarmerIdCard(farmer);
+            } else {
+                log.warn("Farmer not found for user ID: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("Error generating farmer ID card for user {}: {}", userId, e.getMessage());
+        }
+    }
+    
+    private void generateEmployeeIdCard(Long userId) {
+        try {
+            // Find employee by user ID (assuming employee table has user_id or email reference)
+            // You may need to adjust this based on your database relationship
+            com.farmer.Form.Entity.Employee employee = findEmployeeByUserId(userId);
+            if (employee != null) {
+                idCardService.generateEmployeeIdCard(employee);
+            } else {
+                log.warn("Employee not found for user ID: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("Error generating employee ID card for user {}: {}", userId, e.getMessage());
+        }
+    }
+    
+    private com.farmer.Form.Entity.Farmer findFarmerByUserId(Long userId) {
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null && user.getEmail() != null) {
+                return farmerRepository.findByEmail(user.getEmail()).orElse(null);
+            }
+        } catch (Exception e) {
+            log.error("Error finding farmer by user ID {}: {}", userId, e.getMessage());
+        }
+        return null;
+    }
+    
+    private com.farmer.Form.Entity.Employee findEmployeeByUserId(Long userId) {
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null && user.getEmail() != null) {
+                return employeeRepository.findByEmail(user.getEmail()).orElse(null);
+            }
+        } catch (Exception e) {
+            log.error("Error finding employee by user ID {}: {}", userId, e.getMessage());
+        }
+        return null;
     }
 
     public User getUserByEmailOrPhone(String emailOrPhone) {

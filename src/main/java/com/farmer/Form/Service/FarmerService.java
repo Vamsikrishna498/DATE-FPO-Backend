@@ -59,5 +59,8 @@ public interface FarmerService {
     FarmerDashboardDTO getFarmerDashboardData(Long farmerId);
     FarmerDashboardDTO getFarmerDashboardDataByEmail(String email);
     FarmerDTO getFarmerByEmail(String email);
+
+    // Photo-only update for ID card refresh
+    FarmerDTO updateFarmerPhoto(Long id, org.springframework.web.multipart.MultipartFile photo);
 }
  
