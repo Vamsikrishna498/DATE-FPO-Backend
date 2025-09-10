@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import com.farmer.Form.DTO.LoginRequest;
 import com.farmer.Form.DTO.ResetPasswordDTO;
 import com.farmer.Form.DTO.UserDTO;
-import com.farmer.Form.DTO.UserResponseDTO;
+// import com.farmer.Form.DTO.UserResponseDTO;
 import com.farmer.Form.DTO.UserViewDTO;
 import com.farmer.Form.DTO.UserRegistrationDTO;
 import com.farmer.Form.Entity.User;
@@ -89,14 +89,18 @@ public class AuthController {
     // ✅ FPO LOGIN
     @PostMapping("/fpo-login")
     public ResponseEntity<?> fpoLogin(@RequestBody Map<String, String> req) {
-        String email = req.get("email");
+        final String emailOrPhone = (req.get("email") != null && !req.get("email").isBlank())
+                ? req.get("email")
+                : req.get("userName");
         String password = req.get("password");
         
-        if (email == null || password == null) {
+        if (emailOrPhone == null || password == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email and password are required"));
         }
         
-        FPOUser user = fpoUserRepository.findByEmail(email).orElse(null);
+        FPOUser user = fpoUserRepository.findByEmail(emailOrPhone)
+                .or(() -> fpoUserRepository.findByPhoneNumber(emailOrPhone))
+                .orElse(null);
         if (user == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
         }
@@ -118,6 +122,7 @@ public class AuthController {
         response.put("userId", user.getId());
         response.put("email", user.getEmail());
         response.put("role", user.getRole().name());
+        response.put("userType", user.getRole().name());
         response.put("fpoId", fpo != null ? fpo.getId() : null);
         response.put("fpoName", fpo != null ? fpo.getFpoName() : null);
         

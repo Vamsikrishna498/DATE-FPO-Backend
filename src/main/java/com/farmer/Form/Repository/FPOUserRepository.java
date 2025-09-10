@@ -11,6 +11,7 @@ public interface FPOUserRepository extends JpaRepository<FPOUser, Long> {
     List<FPOUser> findByFpo(FPO fpo);
     boolean existsByEmail(String email);
     Optional<FPOUser> findByEmail(String email);
+    Optional<FPOUser> findByPhoneNumber(String phoneNumber);
 }
 
 
