@@ -113,4 +113,12 @@ public class FarmerController {
     public ResponseEntity<FarmerDTO> getFarmerByEmail(@RequestParam String email) {
         return ResponseEntity.ok(service.getFarmerByEmail(email));
     }
+
+    @PatchMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FarmerDTO> updateFarmerPhoto(
+            @PathVariable Long id,
+            @RequestPart(value = "photo", required = true) MultipartFile photo) {
+        FarmerDTO updated = service.updateFarmerPhoto(id, photo);
+        return ResponseEntity.ok(updated);
+    }
 }

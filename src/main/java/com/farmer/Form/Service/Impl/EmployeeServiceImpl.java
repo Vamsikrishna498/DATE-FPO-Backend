@@ -10,7 +10,10 @@ import com.farmer.Form.Repository.FarmerRepository;
 import com.farmer.Form.Repository.UserRepository;
 import com.farmer.Form.Service.EmployeeService;
 import com.farmer.Form.Service.EmailService;
+import com.farmer.Form.Service.IdCardService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+import com.farmer.Form.Service.FileStorageService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +29,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final IdCardService idCardService;
+    private final FileStorageService fileStorageService;
  
     @Override
     public Employee saveEmployee(Employee updated) {
@@ -74,6 +79,31 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (updated.getAccessStatus() != null) existing.setAccessStatus(updated.getAccessStatus());
  
         return repository.save(existing);
+    }
+
+    @Override
+    public Employee updateEmployeePhoto(Long id, MultipartFile photo) {
+        Employee existing = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        try {
+            String photoFile = (photo != null && !photo.isEmpty())
+                    ? fileStorageService.storeFile(photo, "photos")
+                    : existing.getPhotoFileName();
+            existing.setPhotoFileName(photoFile);
+            Employee saved = repository.save(existing);
+            try {
+                List<com.farmer.Form.Entity.IdCard> cards = idCardService.getByHolderId(String.valueOf(saved.getId()));
+                com.farmer.Form.Entity.IdCard latestActive = cards.stream()
+                        .filter(c -> c.getStatus() == com.farmer.Form.Entity.IdCard.CardStatus.ACTIVE)
+                        .findFirst().orElse(cards.isEmpty() ? null : cards.get(0));
+                if (latestActive != null) {
+                    idCardService.regenerateIdCard(latestActive.getCardId());
+                }
+            } catch (Exception ignore) {}
+            return saved;
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to update employee photo", e);
+        }
     }
  
     @Override
@@ -172,6 +202,9 @@ public class EmployeeServiceImpl implements EmployeeService {
                 // Log error but don't fail the operation
                 System.err.println("Failed to send email: " + e.getMessage());
             }
+            
+            // Note: ID card generation is now handled in UserService during user approval
+            // No need to generate ID card here as it's done automatically when user is approved
             
             return true;
         } catch (Exception e) {

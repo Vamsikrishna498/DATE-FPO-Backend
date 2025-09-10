@@ -11,6 +11,8 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FarmerDashboardDTO {
+    // Identifier
+    private Long id;
     // Personal Information
     private String salutation;
     private String firstName;
