@@ -30,7 +30,7 @@ public class FPOCropController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO') or hasRole('FARMER')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO') or hasRole('FARMER')")
     public ResponseEntity<FPOCropDTO> createCrop(
             @PathVariable Long fpoId,
             @Valid @RequestBody FPOCropCreationDTO cropDTO) {

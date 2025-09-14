@@ -29,7 +29,7 @@ public class FPOBoardMemberController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<FPOBoardMemberDTO> addBoardMember(
             @PathVariable Long fpoId,
             @Valid @RequestBody FPOBoardMemberCreationDTO boardMemberDTO) {
@@ -50,7 +50,7 @@ public class FPOBoardMemberController {
     }
 
     @DeleteMapping("/{boardMemberId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<Void> removeBoardMember(
             @PathVariable Long fpoId,
             @PathVariable Long boardMemberId) {

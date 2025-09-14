@@ -24,7 +24,7 @@ public class FPOController {
 
     // FPO CRUD Operations
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE')")
     public ResponseEntity<FPODTO> createFPO(@Valid @RequestBody FPOCreationDTO fpoCreationDTO) {
         log.info("Creating new FPO: {}", fpoCreationDTO.getFpoName());
         FPODTO createdFPO = fpoService.createFPO(fpoCreationDTO);
@@ -93,7 +93,7 @@ public class FPOController {
 
     // FPO List and Search
     @PostMapping("/search")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE')")
     public ResponseEntity<Page<FPODTO>> searchFPOs(@RequestBody FPOListRequestDTO request) {
         log.info("Searching FPOs with filters: {}", request);
         Page<FPODTO> fpos = fpoService.getAllFPOs(request);
@@ -128,14 +128,14 @@ public class FPOController {
     }
 
     @GetMapping("/state/{state}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE')")
     public ResponseEntity<List<FPODTO>> getFPOsByState(@PathVariable String state) {
         List<FPODTO> fpos = fpoService.getFPOsByState(state);
         return ResponseEntity.ok(fpos);
     }
 
     @GetMapping("/district/{district}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE')")
     public ResponseEntity<List<FPODTO>> getFPOsByDistrict(@PathVariable String district) {
         List<FPODTO> fpos = fpoService.getFPOsByDistrict(district);
         return ResponseEntity.ok(fpos);

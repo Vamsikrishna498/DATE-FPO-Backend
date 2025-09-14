@@ -46,13 +46,16 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Public endpoints
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/super-admin/dashboard/**").permitAll()
                 .requestMatchers("/api/admin/farmers-with-kyc").permitAll()
-                .requestMatchers("/api/**").permitAll()
+                // All other API endpoints require authentication so that @PreAuthorize works with roles
+                .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
-            );
-            // .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

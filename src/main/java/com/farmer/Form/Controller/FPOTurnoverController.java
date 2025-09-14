@@ -29,7 +29,7 @@ public class FPOTurnoverController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<FPOTurnoverDTO> createTurnover(
             @PathVariable Long fpoId,
             @Valid @RequestBody FPOTurnoverCreationDTO turnoverDTO) {
@@ -50,7 +50,7 @@ public class FPOTurnoverController {
     }
 
     @DeleteMapping("/{turnoverId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<Void> deleteTurnover(
             @PathVariable Long fpoId,
             @PathVariable Long turnoverId) {

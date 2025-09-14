@@ -29,7 +29,7 @@ public class FPOProductController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<FPOProductDTO> createProduct(
             @PathVariable Long fpoId,
             @Valid @RequestBody FPOProductCreationDTO productDTO) {
@@ -69,7 +69,7 @@ public class FPOProductController {
     }
 
     @PostMapping("/categories")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<FPOProductCategoryDTO> createProductCategory(
             @PathVariable Long fpoId,
             @Valid @RequestBody FPOProductCategoryCreationDTO categoryDTO) {
@@ -90,7 +90,7 @@ public class FPOProductController {
     }
 
     @DeleteMapping("/categories/{categoryId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<Void> deleteProductCategory(
             @PathVariable Long fpoId,
             @PathVariable Long categoryId) {

@@ -108,7 +108,8 @@ public class FPO {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (fpoId == null) {
+        // Ensure FPO ID is always generated if missing or blank
+        if (fpoId == null || fpoId.isBlank()) {
             fpoId = generateFPOId();
         }
     }
