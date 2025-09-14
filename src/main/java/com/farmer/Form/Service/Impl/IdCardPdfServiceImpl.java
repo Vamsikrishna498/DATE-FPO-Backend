@@ -46,36 +46,38 @@ public class IdCardPdfServiceImpl implements IdCardPdfService {
     
     @Override
     public byte[] generateFarmerIdCardPdf(Farmer farmer, IdCard idCard) throws IOException {
+        // Render the same rich design as PNG, then embed into a single-page PDF
+        BufferedImage image = createIdCardImage(farmer, idCard, true);
+        byte[] pngBytes = convertImageToByteArray(image);
+        
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdf = new PdfDocument(writer);
-        Document document = new Document(pdf);
-        
-        // Set page size to ID card dimensions
         pdf.setDefaultPageSize(new com.itextpdf.kernel.geom.PageSize(CARD_WIDTH, CARD_HEIGHT));
-        
-        // Create ID card layout
-        Div cardContainer = createIdCardLayout(farmer, idCard, true);
-        document.add(cardContainer);
-        
+        Document document = new Document(pdf);
+        document.setMargins(0, 0, 0, 0);
+        Image img = new Image(ImageDataFactory.create(pngBytes));
+        img.setAutoScale(true);
+        document.add(img);
         document.close();
         return baos.toByteArray();
     }
     
     @Override
     public byte[] generateEmployeeIdCardPdf(Employee employee, IdCard idCard) throws IOException {
+        // Render PNG-style card and embed into one-page PDF (ensures identical look)
+        BufferedImage image = createIdCardImage(employee, idCard, false);
+        byte[] pngBytes = convertImageToByteArray(image);
+        
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdf = new PdfDocument(writer);
-        Document document = new Document(pdf);
-        
-        // Set page size to ID card dimensions
         pdf.setDefaultPageSize(new com.itextpdf.kernel.geom.PageSize(CARD_WIDTH, CARD_HEIGHT));
-        
-        // Create ID card layout
-        Div cardContainer = createIdCardLayout(employee, idCard, false);
-        document.add(cardContainer);
-        
+        Document document = new Document(pdf);
+        document.setMargins(0, 0, 0, 0);
+        Image img = new Image(ImageDataFactory.create(pngBytes));
+        img.setAutoScale(true);
+        document.add(img);
         document.close();
         return baos.toByteArray();
     }
@@ -143,19 +145,32 @@ public class IdCardPdfServiceImpl implements IdCardPdfService {
         // Left column - Photo and basic info
         Div leftColumn = new Div();
         
-        // Photo placeholder
-        if (idCard.getPhotoFileName() != null) {
+        // Photo: prefer latest from profile entity, fallback to card record
+        String photoFileName = null;
+        if (isFarmer) {
+            photoFileName = ((Farmer) person).getPhotoFileName();
+        } else {
+            photoFileName = ((Employee) person).getPhotoFileName();
+        }
+        if (photoFileName == null || photoFileName.isEmpty()) {
+            photoFileName = idCard.getPhotoFileName();
+        }
+        if (photoFileName != null) {
             try {
-                Resource photoResource = loadPhotoResource(idCard.getPhotoFileName());
+                System.out.println("🖼️ IDCard PDF: trying photo " + photoFileName);
+                Resource photoResource = loadPhotoResource(photoFileName);
                 if (photoResource != null && photoResource.exists()) {
+                    System.out.println("🖼️ IDCard PDF: photo exists, embedding.");
                     Image photo = new Image(ImageDataFactory.create(photoResource.getInputStream().readAllBytes()));
                     photo.setWidth(80);
                     photo.setHeight(100);
                     leftColumn.add(photo);
                 } else {
+                    System.out.println("⚠️ IDCard PDF: photo NOT found, using placeholder.");
                     leftColumn.add(createPhotoPlaceholder());
                 }
             } catch (Exception e) {
+                System.out.println("❌ IDCard PDF: error loading photo: " + e.getMessage());
                 leftColumn.add(createPhotoPlaceholder());
             }
         } else {
@@ -269,13 +284,40 @@ public class IdCardPdfServiceImpl implements IdCardPdfService {
         int subHeaderX = (CARD_WIDTH - fm.stringWidth(subHeader)) / 2;
         g2d.drawString(subHeader, subHeaderX, 55);
         
-        // Photo placeholder
-        g2d.setColor(Color.LIGHT_GRAY);
-        g2d.fillRect(20, 75, 80, 100);
-        g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("Arial", Font.PLAIN, 10));
-        g2d.drawRect(20, 75, 80, 100);
-        g2d.drawString("PHOTO", 45, 128);
+        // Photo (use uploaded one when available)
+        boolean drewPhoto = false;
+        String inlinePhoto = null;
+        if (isFarmer) {
+            inlinePhoto = ((Farmer) person).getPhotoFileName();
+        } else {
+            inlinePhoto = ((Employee) person).getPhotoFileName();
+        }
+        if (inlinePhoto == null || inlinePhoto.isEmpty()) inlinePhoto = idCard.getPhotoFileName();
+        if (inlinePhoto != null && !inlinePhoto.isEmpty()) {
+            try {
+                System.out.println("🖼️ IDCard PNG: trying photo " + inlinePhoto);
+                Resource photoRes = loadPhotoResource(inlinePhoto);
+                if (photoRes != null && photoRes.exists()) {
+                    System.out.println("🖼️ IDCard PNG: photo exists, drawing.");
+                    BufferedImage photo = ImageIO.read(photoRes.getInputStream());
+                    if (photo != null) {
+                        java.awt.Image scaled = photo.getScaledInstance(80, 100, java.awt.Image.SCALE_SMOOTH);
+                        g2d.drawImage(scaled, 20, 75, null);
+                        drewPhoto = true;
+                    }
+                }
+            } catch (Exception ex) {
+                System.out.println("❌ IDCard PNG: error loading photo: " + ex.getMessage());
+            }
+        }
+        if (!drewPhoto) {
+            g2d.setColor(Color.LIGHT_GRAY);
+            g2d.fillRect(20, 75, 80, 100);
+            g2d.setColor(Color.BLACK);
+            g2d.setFont(new Font("Arial", Font.PLAIN, 10));
+            g2d.drawRect(20, 75, 80, 100);
+            g2d.drawString("PHOTO", 45, 128);
+        }
         
         // Basic info
         g2d.setFont(new Font("Arial", Font.PLAIN, 12));
