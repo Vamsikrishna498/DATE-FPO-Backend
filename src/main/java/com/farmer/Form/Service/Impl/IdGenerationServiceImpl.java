@@ -202,9 +202,13 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     
     @Override
     public String generateEmployeeId(String state, String district) {
+        System.out.println("🔄 Generating employee ID for state: " + state + ", district: " + district);
         String state2 = normalizeTwoLetters(state);
         String district2 = normalizeTwoLetters(district);
-        return generateId("EMP", state2, district2);
+        System.out.println("📍 Normalized state: " + state2 + ", district: " + district2);
+        String generatedId = generateId("EMP", state2, district2);
+        System.out.println("✅ Generated employee ID: " + generatedId);
+        return generatedId;
     }
     
     private String generateId(String prefix, String stateCode, String districtCode) {

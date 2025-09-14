@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
-@Component
+// @Component - Disabled to prevent automatic execution during startup
 public class CreateMissingFarmer implements CommandLineRunner {
 
     @Autowired

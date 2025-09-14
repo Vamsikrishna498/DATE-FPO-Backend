@@ -11,6 +11,10 @@ import com.farmer.Form.Repository.EmployeeRepository;
 import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.FileStorageService;
 import com.farmer.Form.Service.IdCardService;
+import com.farmer.Form.Repository.IdCardRepository;
+import com.farmer.Form.Repository.FPOMemberRepository;
+import com.farmer.Form.Repository.FPOServiceRepository;
+import com.farmer.Form.Repository.FPOCropRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +38,18 @@ public class FarmerServiceImpl implements FarmerService {
 
     @Autowired
     private IdCardService idCardService;
+
+    @Autowired
+    private IdCardRepository idCardRepository;
+
+    @Autowired
+    private FPOMemberRepository fpoMemberRepository;
+
+    @Autowired
+    private FPOServiceRepository fpoServiceRepository;
+
+    @Autowired
+    private FPOCropRepository fpoCropRepository;
 
     @Override
     public FarmerDTO createFarmer(FarmerDTO dto, MultipartFile photo, MultipartFile passbookPhoto,
@@ -196,6 +212,34 @@ public class FarmerServiceImpl implements FarmerService {
 
     @Override
     public void deleteFarmerBySuperAdmin(Long id) {
+        try {
+            // Remove any linked ID cards first to satisfy FK constraints
+            java.util.List<com.farmer.Form.Entity.IdCard> cards = idCardRepository.findByHolderId(String.valueOf(id));
+            if (cards != null && !cards.isEmpty()) {
+                idCardRepository.deleteAll(cards);
+            }
+            // Remove FPO memberships that reference this farmer
+            try {
+                java.util.List<com.farmer.Form.Entity.FPOMember> memberships = fpoMemberRepository.findByFarmerId(id);
+                if (memberships != null && !memberships.isEmpty()) {
+                    fpoMemberRepository.deleteAll(memberships);
+                }
+            } catch (Exception ignore) {}
+            // Remove FPO services rows that reference this farmer
+            try {
+                java.util.List<com.farmer.Form.Entity.FPOService> services = fpoServiceRepository.findByFarmerId(id);
+                if (services != null && !services.isEmpty()) {
+                    fpoServiceRepository.deleteAll(services);
+                }
+            } catch (Exception ignore) {}
+            // Remove FPO crops rows that reference this farmer
+            try {
+                java.util.List<com.farmer.Form.Entity.FPOCrop> crops = fpoCropRepository.findByFarmerId(id);
+                if (crops != null && !crops.isEmpty()) {
+                    fpoCropRepository.deleteAll(crops);
+                }
+            } catch (Exception ignore) {}
+        } catch (Exception ignore) {}
         farmerRepository.deleteById(id);
     }
 

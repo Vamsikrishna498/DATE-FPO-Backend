@@ -95,17 +95,24 @@ public class IdCardServiceImpl implements IdCardService {
     
     @Override
     public IdCard generateEmployeeIdCard(Employee employee) throws IOException {
+        System.out.println("🔄 Generating ID card for employee: " + employee.getId() + " - " + employee.getFirstName() + " " + employee.getLastName());
+        System.out.println("📍 Employee state: " + employee.getState() + ", district: " + employee.getDistrict());
+        
         // Check if employee already has an ID card
         List<IdCard> existingCards = idCardRepository.findByHolderId(employee.getId().toString());
         if (!existingCards.isEmpty()) {
             IdCard existingCard = existingCards.get(0);
             if (existingCard.getStatus() == IdCard.CardStatus.ACTIVE) {
-                return existingCard; // Return existing active card
+                // Ensure photo on card stays in sync with latest profile photo
+                existingCard.setPhotoFileName(employee.getPhotoFileName());
+                System.out.println("✅ Updating existing active ID card photo: " + existingCard.getCardId());
+                return idCardRepository.save(existingCard);
             }
         }
         
         // Generate unique ID
         String cardId = idGenerationService.generateEmployeeId(employee.getState(), employee.getDistrict());
+        System.out.println("🎯 Generated employee ID: " + cardId);
         
         // Create ID card entity
         IdCard idCard = IdCard.builder()

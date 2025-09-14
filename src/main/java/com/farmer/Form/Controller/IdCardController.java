@@ -60,14 +60,29 @@ public class IdCardController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<IdCard> generateEmployeeIdCard(@PathVariable Long employeeId) {
         try {
+            System.out.println("🔄 IdCardController: Generating ID card for employee ID: " + employeeId);
+            
             // Get employee details first
             Employee employee = employeeService.getEmployeeById(employeeId);
             if (employee == null) {
+                System.out.println("❌ Employee not found with ID: " + employeeId);
                 return ResponseEntity.notFound().build();
             }
+            
+            System.out.println("✅ Found employee: " + employee.getFirstName() + " " + employee.getLastName());
+            System.out.println("📍 Employee state: " + employee.getState() + ", district: " + employee.getDistrict());
+            
             IdCard idCard = idCardService.generateEmployeeIdCard(employee);
+            System.out.println("✅ Generated ID card: " + idCard.getCardId() + " for employee: " + employee.getFirstName());
+            
             return ResponseEntity.ok(idCard);
         } catch (IOException e) {
+            System.out.println("❌ IOException in generateEmployeeIdCard: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } catch (Exception e) {
+            System.out.println("❌ Unexpected error in generateEmployeeIdCard: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -163,7 +178,8 @@ public class IdCardController {
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDispositionFormData("attachment", "idcard_" + cardId + ".pdf");
+            // Download as just the card id (e.g., EMPXXIN0002.pdf)
+            headers.setContentDispositionFormData("attachment", cardId + ".pdf");
             headers.setContentLength(pdfBytes.length);
             
             return ResponseEntity.ok()
