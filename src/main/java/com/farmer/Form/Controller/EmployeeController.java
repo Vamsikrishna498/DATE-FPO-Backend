@@ -707,6 +707,89 @@ public class EmployeeController {
         }
     }
 
+    // === EMPLOYEE SELF ID CARD (like farmer) ===
+    // View my ID card
+    @GetMapping("/dashboard/my/id-card")
+    public ResponseEntity<Map<String, Object>> getMyEmployeeIdCard(Authentication authentication) {
+        String employeeEmail = authentication.getName();
+        Employee employee = employeeService.getEmployeeByEmail(employeeEmail);
+        if (employee == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "Employee not found"));
+        }
+
+        // Primary lookup by holderId
+        List<com.farmer.Form.Entity.IdCard> cards = idCardService.getByHolderId(String.valueOf(employee.getId()));
+        com.farmer.Form.Entity.IdCard card = cards.stream()
+                .filter(c -> c.getCardType() == com.farmer.Form.Entity.IdCard.CardType.EMPLOYEE)
+                .findFirst()
+                .orElse(null);
+
+        // Fallback by name similar to farmer flow
+        if (card == null) {
+            try {
+                String nameQuery = ((employee.getFirstName() != null ? employee.getFirstName() : "") + " " +
+                        (employee.getLastName() != null ? employee.getLastName() : "")).trim();
+                org.springframework.data.domain.Page<com.farmer.Form.Entity.IdCard> pageA =
+                        idCardService.searchIdCardsByName(nameQuery,
+                                com.farmer.Form.Entity.IdCard.CardType.EMPLOYEE,
+                                org.springframework.data.domain.PageRequest.of(0, 20));
+                card = pageA.getContent().stream().findFirst().orElse(null);
+
+                if (card == null) {
+                    org.springframework.data.domain.Page<com.farmer.Form.Entity.IdCard> all =
+                            idCardService.getAllIdCards(org.springframework.data.domain.PageRequest.of(0, 1000));
+                    String nq = nameQuery.toLowerCase();
+                    card = all.getContent().stream()
+                            .filter(c -> c.getHolderName() != null && c.getHolderName().toLowerCase().contains(nq))
+                            .findFirst().orElse(null);
+                }
+            } catch (Exception ignored) { }
+        }
+
+        if (card == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "No ID card record found for this employee"));
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("cardId", card.getCardId());
+        response.put("status", card.getStatus());
+        response.put("holderId", card.getHolderId());
+        response.put("holderName", card.getHolderName());
+        response.put("pngUrl", "/api/id-cards/" + card.getCardId() + "/download/png");
+        response.put("pdfUrl", "/api/id-cards/" + card.getCardId() + "/download/pdf");
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Generate my ID card (if missing)
+    @PostMapping("/dashboard/my/id-card")
+    public ResponseEntity<Map<String, Object>> generateMyEmployeeIdCard(Authentication authentication) {
+        String employeeEmail = authentication.getName();
+        Employee employee = employeeService.getEmployeeByEmail(employeeEmail);
+        if (employee == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "Employee not found"));
+        }
+
+        try {
+            List<com.farmer.Form.Entity.IdCard> cards = idCardService.getByHolderId(String.valueOf(employee.getId()));
+            com.farmer.Form.Entity.IdCard existing = cards.stream()
+                    .filter(c -> c.getCardType() == com.farmer.Form.Entity.IdCard.CardType.EMPLOYEE)
+                    .findFirst().orElse(null);
+            com.farmer.Form.Entity.IdCard card = existing != null ? existing : idCardService.generateEmployeeIdCard(employee);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("cardId", card.getCardId());
+            response.put("status", card.getStatus());
+            response.put("holderId", card.getHolderId());
+            response.put("holderName", card.getHolderName());
+            response.put("pngUrl", "/api/id-cards/" + card.getCardId() + "/download/png");
+            response.put("pdfUrl", "/api/id-cards/" + card.getCardId() + "/download/pdf");
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Failed to generate ID card: " + e.getMessage()));
+        }
+    }
+
     // ✅ View Employee Details
     @GetMapping("/{id}/details")
     public ResponseEntity<Map<String, Object>> getEmployeeDetails(@PathVariable Long id) {
