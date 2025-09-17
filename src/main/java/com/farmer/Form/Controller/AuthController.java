@@ -445,6 +445,67 @@ public class AuthController {
         return "This is a test endpoint.";
     }
 
+    // 🔧 Debug endpoint to check user details
+    @GetMapping("/debug-user/{email}")
+    public ResponseEntity<Map<String, Object>> debugUser(@PathVariable String email) {
+        try {
+            User user = userService.getUserByEmailOrPhone(email);
+            Map<String, Object> debugInfo = new HashMap<>();
+            debugInfo.put("id", user.getId());
+            debugInfo.put("name", user.getName());
+            debugInfo.put("email", user.getEmail());
+            debugInfo.put("phoneNumber", user.getPhoneNumber());
+            debugInfo.put("role", user.getRole().name());
+            debugInfo.put("status", user.getStatus().name());
+            debugInfo.put("hasPassword", user.getPassword() != null);
+            debugInfo.put("forcePasswordChange", user.isForcePasswordChange());
+            debugInfo.put("kycStatus", user.getKycStatus().name());
+            return ResponseEntity.ok(debugInfo);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(404).body(error);
+        }
+    }
+
+    // 🔧 Debug endpoint to check password matching
+    @PostMapping("/debug-password-match")
+    public ResponseEntity<Map<String, Object>> debugPasswordMatch(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String password = request.get("password");
+            
+            if (email == null || password == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Email and password are required");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            User user = userService.getUserByEmailOrPhone(email);
+            Map<String, Object> debugInfo = new HashMap<>();
+            debugInfo.put("email", user.getEmail());
+            debugInfo.put("status", user.getStatus().name());
+            debugInfo.put("hasPassword", user.getPassword() != null);
+            debugInfo.put("forcePasswordChange", user.isForcePasswordChange());
+            
+            // Test password matching
+            boolean passwordMatches = false;
+            if (user.getPassword() != null) {
+                passwordMatches = passwordEncoder.matches(password, user.getPassword());
+            }
+            
+            debugInfo.put("passwordMatches", passwordMatches);
+            debugInfo.put("providedPassword", password);
+            debugInfo.put("storedPasswordHash", user.getPassword());
+            
+            return ResponseEntity.ok(debugInfo);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(404).body(error);
+        }
+    }
+
     // 🔧 Test login endpoint for debugging
     @PostMapping("/test-login")
     public ResponseEntity<Map<String, Object>> testLogin(@RequestBody Map<String, String> request) {
