@@ -55,6 +55,11 @@ public interface FarmerService {
     void referBackKyc(Long farmerId, String employeeEmail, String reason);
     void rejectKyc(Long farmerId, String employeeEmail, String reason);
     
+    // FPO KYC Management Methods
+    void approveKycByFPO(Long farmerId, String fpoUserEmail);
+    void referBackKycByFPO(Long farmerId, String fpoUserEmail, String reason);
+    void rejectKycByFPO(Long farmerId, String fpoUserEmail, String reason);
+    
     // Farmer Dashboard Methods
     FarmerDashboardDTO getFarmerDashboardData(Long farmerId);
     FarmerDashboardDTO getFarmerDashboardDataByEmail(String email);

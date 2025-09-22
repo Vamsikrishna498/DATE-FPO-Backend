@@ -5,9 +5,11 @@ import com.farmer.Form.Entity.FPO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -50,4 +52,9 @@ public interface FPOProductRepository extends JpaRepository<FPOProduct, Long> {
 
     @Query("SELECT fp FROM FPOProduct fp WHERE fp.fpo.id = :fpoId AND fp.stockQuantity <= fp.minimumStock")
     List<FPOProduct> findLowStockProductsByFpoId(@Param("fpoId") Long fpoId);
+    
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM FPOProduct fp WHERE fp.fpo.id = :fpoId")
+    void deleteByFpoId(@Param("fpoId") Long fpoId);
 }

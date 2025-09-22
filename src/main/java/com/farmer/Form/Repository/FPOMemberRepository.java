@@ -3,9 +3,11 @@ package com.farmer.Form.Repository;
 import com.farmer.Form.Entity.FPOMember;
 import com.farmer.Form.Entity.FPO;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,4 +45,9 @@ public interface FPOMemberRepository extends JpaRepository<FPOMember, Long> {
     Optional<FPOMember> findByFpoAndEmployee(FPO fpo, com.farmer.Form.Entity.Employee employee);
 
     Optional<FPOMember> findByFpoAndUser(FPO fpo, com.farmer.Form.Entity.User user);
+    
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM FPOMember fm WHERE fm.fpo.id = :fpoId")
+    void deleteByFpoId(@Param("fpoId") Long fpoId);
 }

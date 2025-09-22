@@ -29,6 +29,7 @@ import com.farmer.Form.Service.UserService;
 import com.farmer.Form.security.JwtUtil;
 import com.farmer.Form.exception.UserNotApprovedException;
 import com.farmer.Form.exception.UserAlreadyExistsException;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -254,15 +256,24 @@ public class AuthController {
 
     // ✅ SEND OTP
     @PostMapping("/send-otp")
-    public ResponseEntity<String> sendOtp(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> sendOtp(@RequestBody Map<String, String> request) {
         String emailOrPhone = request.get("emailOrPhone");
         if (emailOrPhone == null || emailOrPhone.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Email or phone number is required.");
+            return ResponseEntity.badRequest().body(Map.of("message", "Email or phone number is required."));
         }
-        String otp = otpService.generateAndSendOtp(emailOrPhone.trim());
-        emailService.sendOtpEmail(emailOrPhone.trim(),
-                "Your OTP is: " + otp + ". It is valid for 10 minutes.");
-        return ResponseEntity.ok("OTP sent successfully to your registered email or phone.");
+        try {
+            otpService.generateAndSendOtp(emailOrPhone.trim());
+            return ResponseEntity.ok(Map.of("message", "OTP sent successfully to your registered email or phone."));
+        } catch (IllegalStateException ex) {
+            // Cooldown hit
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                                 .header("Retry-After", String.valueOf(otpService.getRemainingCooldown(emailOrPhone.trim())))
+                                 .body(Map.of("message", ex.getMessage()));
+        } catch (Exception ex) {
+            // Transient error, but OTP might have been dispatched
+            log.warn("Transient error sending OTP to {}: {}", emailOrPhone, ex.getMessage());
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("message", "OTP request accepted. Delivery may take a few seconds."));
+        }
     }
 
     @PostMapping("/resend-otp")
@@ -310,15 +321,23 @@ public class AuthController {
 
     // ✅ FORGOT PASSWORD
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
         String emailOrPhone = request.get("emailOrPhone");
         if (emailOrPhone == null || emailOrPhone.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Email or phone number is required.");
+            return ResponseEntity.badRequest().body(Map.of("message", "Email or phone number is required."));
         }
+        try {
         String otp = otpService.generateAndSendOtp(emailOrPhone.trim());
-        emailService.sendOtpEmail(emailOrPhone.trim(),
-                "Your password reset OTP is: " + otp + ". It is valid for 10 minutes.");
-        return ResponseEntity.ok("Password reset OTP sent successfully.");
+            // The emailService.sendOtpEmail is already called inside otpService.generateAndSendOtp
+            return ResponseEntity.ok(Map.of("message", "Password reset OTP sent successfully."));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                                 .header("Retry-After", String.valueOf(otpService.getRemainingCooldown(emailOrPhone.trim())))
+                                 .body(Map.of("message", ex.getMessage()));
+        } catch (Exception ex) {
+            log.warn("Transient error sending Forgot Password OTP to {}: {}", emailOrPhone, ex.getMessage());
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("message", "Password reset OTP request accepted. Delivery may take a few seconds."));
+        }
     }
 
     // ✅ RESET PASSWORD WITHOUT OTP

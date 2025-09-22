@@ -502,4 +502,51 @@ public class FarmerServiceImpl implements FarmerService {
         if (farmer.getSoilTestCertificateFileName() == null) count++;
         return count;
     }
+
+    // FPO KYC Management Methods
+    @Override
+    public void approveKycByFPO(Long farmerId, String fpoUserEmail) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found with ID: " + farmerId));
+        
+        // For FPO users, we don't need to check assignment since FPO users can approve any farmer
+        farmer.setKycStatus(Farmer.KycStatus.APPROVED);
+        farmer.setKycApproved(true);
+        farmer.setKycReviewedDate(LocalDate.now());
+        farmer.setKycReviewedBy(fpoUserEmail);
+        farmer.setKycRejectionReason(null);
+        farmer.setKycReferBackReason(null);
+        
+        farmerRepository.save(farmer);
+    }
+
+    @Override
+    public void referBackKycByFPO(Long farmerId, String fpoUserEmail, String reason) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found with ID: " + farmerId));
+        
+        farmer.setKycStatus(Farmer.KycStatus.PENDING);
+        farmer.setKycApproved(false);
+        farmer.setKycReviewedDate(LocalDate.now());
+        farmer.setKycReviewedBy(fpoUserEmail);
+        farmer.setKycReferBackReason(reason);
+        farmer.setKycRejectionReason(null);
+        
+        farmerRepository.save(farmer);
+    }
+
+    @Override
+    public void rejectKycByFPO(Long farmerId, String fpoUserEmail, String reason) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found with ID: " + farmerId));
+        
+        farmer.setKycStatus(Farmer.KycStatus.REJECTED);
+        farmer.setKycApproved(false);
+        farmer.setKycReviewedDate(LocalDate.now());
+        farmer.setKycReviewedBy(fpoUserEmail);
+        farmer.setKycRejectionReason(reason);
+        farmer.setKycReferBackReason(null);
+        
+        farmerRepository.save(farmer);
+    }
 }

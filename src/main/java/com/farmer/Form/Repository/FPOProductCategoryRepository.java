@@ -3,9 +3,11 @@ package com.farmer.Form.Repository;
 import com.farmer.Form.Entity.FPOProductCategory;
 import com.farmer.Form.Entity.FPO;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,4 +24,9 @@ public interface FPOProductCategoryRepository extends JpaRepository<FPOProductCa
 
     @Query("SELECT COUNT(fpc) FROM FPOProductCategory fpc WHERE fpc.fpo.id = :fpoId")
     Long countByFpoId(@Param("fpoId") Long fpoId);
+    
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM FPOProductCategory fpc WHERE fpc.fpo.id = :fpoId")
+    void deleteByFpoId(@Param("fpoId") Long fpoId);
 }

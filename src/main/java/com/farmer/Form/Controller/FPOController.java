@@ -2,6 +2,14 @@ package com.farmer.Form.Controller;
 
 import com.farmer.Form.DTO.*;
 import com.farmer.Form.Service.FPOService;
+import com.farmer.Form.Service.FarmerService;
+import com.farmer.Form.Entity.FPOMember;
+import com.farmer.Form.Entity.Farmer;
+import com.farmer.Form.Entity.FPO;
+import com.farmer.Form.Repository.FPOMemberRepository;
+import com.farmer.Form.Repository.FPORepository;
+import com.farmer.Form.Repository.FPOUserRepository;
+import com.farmer.Form.Repository.FarmerRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,9 +17,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/fpo")
@@ -21,6 +31,11 @@ import java.util.List;
 public class FPOController {
 
     private final FPOService fpoService;
+    private final FarmerService farmerService;
+    private final FPOMemberRepository fpoMemberRepository;
+    private final FPORepository fpoRepository;
+    private final FPOUserRepository fpoUserRepository;
+    private final FarmerRepository farmerRepository;
 
     // FPO CRUD Operations
     @PostMapping
@@ -190,5 +205,169 @@ public class FPOController {
     public ResponseEntity<Long> getFPOsCountByStatus(@PathVariable String status) {
         Long count = fpoService.getFPOsCountByStatus(com.farmer.Form.Entity.FPO.FPOStatus.valueOf(status));
         return ResponseEntity.ok(count);
+    }
+
+    // FPO KYC Management Endpoints
+    @PutMapping("/kyc/approve/{farmerId}")
+    @PreAuthorize("hasRole('FPO')")
+    public ResponseEntity<String> approveKyc(@PathVariable Long farmerId, Authentication authentication) {
+        try {
+            String fpoUserEmail = authentication.getName();
+            log.info("FPO KYC approval request for farmer {} by FPO user {}", farmerId, fpoUserEmail);
+            farmerService.approveKycByFPO(farmerId, fpoUserEmail);
+            return ResponseEntity.ok("KYC approved successfully by FPO");
+        } catch (Exception e) {
+            log.error("Error approving KYC for farmer {} by FPO user {}: {}", farmerId, authentication.getName(), e.getMessage());
+            return ResponseEntity.badRequest().body("Error approving KYC: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/kyc/reject/{farmerId}")
+    @PreAuthorize("hasRole('FPO')")
+    public ResponseEntity<String> rejectKyc(@PathVariable Long farmerId, 
+                                          @RequestBody Map<String, String> request,
+                                          Authentication authentication) {
+        try {
+            String fpoUserEmail = authentication.getName();
+            String reason = request.get("reason");
+            if (reason == null || reason.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Reason is required for rejection");
+            }
+            log.info("FPO KYC rejection request for farmer {} by FPO user {} with reason: {}", farmerId, fpoUserEmail, reason);
+            farmerService.rejectKycByFPO(farmerId, fpoUserEmail, reason);
+            return ResponseEntity.ok("KYC rejected successfully by FPO");
+        } catch (Exception e) {
+            log.error("Error rejecting KYC for farmer {} by FPO user {}: {}", farmerId, authentication.getName(), e.getMessage());
+            return ResponseEntity.badRequest().body("Error rejecting KYC: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/kyc/refer-back/{farmerId}")
+    @PreAuthorize("hasRole('FPO')")
+    public ResponseEntity<String> referBackKyc(@PathVariable Long farmerId, 
+                                             @RequestBody Map<String, String> request,
+                                             Authentication authentication) {
+        try {
+            String fpoUserEmail = authentication.getName();
+            String reason = request.get("reason");
+            if (reason == null || reason.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Reason is required for refer back");
+            }
+            log.info("FPO KYC refer-back request for farmer {} by FPO user {} with reason: {}", farmerId, fpoUserEmail, reason);
+            farmerService.referBackKycByFPO(farmerId, fpoUserEmail, reason);
+            return ResponseEntity.ok("KYC referred back successfully by FPO");
+        } catch (Exception e) {
+            log.error("Error referring back KYC for farmer {} by FPO user {}: {}", farmerId, authentication.getName(), e.getMessage());
+            return ResponseEntity.badRequest().body("Error referring back KYC: " + e.getMessage());
+        }
+    }
+
+    // FPO-specific Farmer Management
+    @PostMapping("/{fpoId}/farmers")
+    @PreAuthorize("hasRole('FPO')")
+    public ResponseEntity<Map<String, Object>> createFPOFarmer(@PathVariable Long fpoId, @RequestBody Map<String, Object> farmerData) {
+        try {
+            log.info("Creating FPO-specific farmer for FPO ID: {}", fpoId);
+            
+            // Get FPO entity
+            FPO fpo = fpoRepository.findById(fpoId)
+                .orElseThrow(() -> new RuntimeException("FPO not found with ID: " + fpoId));
+            
+            // Create farmer in global system
+            FarmerDTO farmerDTO = new FarmerDTO();
+            farmerDTO.setFirstName((String) farmerData.get("firstName"));
+            farmerDTO.setLastName((String) farmerData.get("lastName"));
+            farmerDTO.setEmail((String) farmerData.get("email"));
+            farmerDTO.setContactNumber((String) farmerData.get("contactNumber"));
+            farmerDTO.setVillage((String) farmerData.get("village"));
+            farmerDTO.setDistrict((String) farmerData.get("district"));
+            farmerDTO.setState((String) farmerData.get("state"));
+            farmerDTO.setPincode((String) farmerData.get("pincode"));
+            farmerDTO.setDocumentNumber((String) farmerData.get("aadharNumber")); // Using documentNumber for Aadhar
+            farmerDTO.setAccountNumber((String) farmerData.get("bankAccountNumber"));
+            farmerDTO.setIfscCode((String) farmerData.get("ifscCode"));
+            farmerDTO.setBankName((String) farmerData.get("bankName"));
+            farmerDTO.setBranchName((String) farmerData.get("branchName"));
+            
+            // Create farmer (without file uploads for now)
+            FarmerDTO createdFarmerDTO = farmerService.createFarmer(farmerDTO, null, null, null, null);
+            
+            // Create FPOMember record linking farmer to FPO
+            // We need to get the actual Farmer entity from the created farmer ID
+            Farmer farmer = farmerRepository.findById(createdFarmerDTO.getId())
+                .orElseThrow(() -> new RuntimeException("Farmer not found with ID: " + createdFarmerDTO.getId()));
+            
+            FPOMember fpoMember = FPOMember.builder()
+                .fpo(fpo)
+                .farmer(farmer)
+                .memberType(FPOMember.MemberType.FARMER)
+                .status(FPOMember.MemberStatus.ACTIVE)
+                .build();
+            
+            FPOMember savedMember = fpoMemberRepository.save(fpoMember);
+            
+            log.info("Successfully created FPO farmer: {} for FPO: {}", createdFarmerDTO.getId(), fpoId);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "FPO farmer created successfully",
+                "farmerId", createdFarmerDTO.getId(),
+                "memberId", savedMember.getId(),
+                "fpoId", fpoId
+            ));
+            
+        } catch (Exception e) {
+            log.error("Error creating FPO farmer for FPO {}: {}", fpoId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to create FPO farmer: " + e.getMessage()));
+        }
+    }
+
+    // FPO-specific Employee Management
+    @PostMapping("/{fpoId}/employees")
+    @PreAuthorize("hasRole('FPO')")
+    public ResponseEntity<Map<String, Object>> createFPOEmployee(@PathVariable Long fpoId, @RequestBody Map<String, Object> employeeData) {
+        try {
+            log.info("Creating FPO-specific employee for FPO ID: {}", fpoId);
+            
+            // Get FPO entity
+            FPO fpo = fpoRepository.findById(fpoId)
+                .orElseThrow(() -> new RuntimeException("FPO not found with ID: " + fpoId));
+            
+            // Create FPOUser (FPO-specific employee)
+            com.farmer.Form.Entity.FPOUser fpoUser = com.farmer.Form.Entity.FPOUser.builder()
+                .fpo(fpo)
+                .firstName((String) employeeData.get("firstName"))
+                .lastName((String) employeeData.get("lastName"))
+                .email((String) employeeData.get("email"))
+                .phoneNumber((String) employeeData.get("phoneNumber"))
+                .role(com.farmer.Form.Entity.Role.EMPLOYEE)
+                .status(com.farmer.Form.Entity.UserStatus.APPROVED)
+                .passwordHash("Temp@123") // Temporary password - should be changed on first login
+                .build();
+            
+            // Save FPOUser
+            com.farmer.Form.Entity.FPOUser savedFpoUser = fpoUserRepository.save(fpoUser);
+            
+            // Create FPOMember record linking employee to FPO
+            FPOMember fpoMember = FPOMember.builder()
+                .fpo(fpo)
+                .memberType(FPOMember.MemberType.EMPLOYEE)
+                .status(FPOMember.MemberStatus.ACTIVE)
+                .build();
+            
+            FPOMember savedMember = fpoMemberRepository.save(fpoMember);
+            
+            log.info("Successfully created FPO employee: {} for FPO: {}", savedFpoUser.getId(), fpoId);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "FPO employee created successfully",
+                "employeeId", savedFpoUser.getId(),
+                "memberId", savedMember.getId(),
+                "fpoId", fpoId
+            ));
+            
+        } catch (Exception e) {
+            log.error("Error creating FPO employee for FPO {}: {}", fpoId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to create FPO employee: " + e.getMessage()));
+        }
     }
 }

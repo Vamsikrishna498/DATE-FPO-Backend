@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
  
 import com.farmer.Form.DTO.EmployeeDTO;
 import com.farmer.Form.DTO.PincodeApiResponse.PostOffice;
@@ -256,6 +257,7 @@ public class EmployeeController {
 
     // KYC Actions - Approve KYC
     @PutMapping("/kyc/approve/{farmerId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<String> approveKyc(@PathVariable Long farmerId, Authentication authentication) {
         try {
             String employeeEmail = authentication.getName();
@@ -268,6 +270,7 @@ public class EmployeeController {
 
     // KYC Actions - Refer Back with reason
     @PutMapping("/kyc/refer-back/{farmerId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<String> referBackKyc(@PathVariable Long farmerId, 
                                              @RequestBody Map<String, String> request,
                                              Authentication authentication) {
@@ -286,6 +289,7 @@ public class EmployeeController {
 
     // KYC Actions - Reject with reason
     @PutMapping("/kyc/reject/{farmerId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
     public ResponseEntity<String> rejectKyc(@PathVariable Long farmerId, 
                                           @RequestBody Map<String, String> request,
                                           Authentication authentication) {

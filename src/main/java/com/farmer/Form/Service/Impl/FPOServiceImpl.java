@@ -33,6 +33,7 @@ public class FPOServiceImpl implements FPOService {
     private final FPOProductCategoryRepository fpoProductCategoryRepository;
     private final FPONotificationRepository fpoNotificationRepository;
     private final com.farmer.Form.Repository.FPOInputShopRepository fpoInputShopRepository;
+    private final FPOUserRepository fpoUserRepository;
     private final FarmerRepository farmerRepository;
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
@@ -124,6 +125,54 @@ public class FPOServiceImpl implements FPOService {
         FPO fpo = fpoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FPO not found with ID: " + id));
         
+        // Delete all related data first to avoid foreign key constraint violations
+        try {
+            // Delete FPO Users
+            fpoUserRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Users for FPO ID: {}", id);
+            
+            // Delete FPO Members
+            fpoMemberRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Members for FPO ID: {}", id);
+            
+            // Delete FPO Board Members
+            fpoBoardMemberRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Board Members for FPO ID: {}", id);
+            
+            // Delete FPO Services
+            fpoServiceRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Services for FPO ID: {}", id);
+            
+            // Delete FPO Crops
+            fpoCropRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Crops for FPO ID: {}", id);
+            
+            // Delete FPO Turnovers
+            fpoTurnoverRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Turnovers for FPO ID: {}", id);
+            
+            // Delete FPO Input Shops
+            fpoInputShopRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Input Shops for FPO ID: {}", id);
+            
+            // Delete FPO Product Categories
+            fpoProductCategoryRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Product Categories for FPO ID: {}", id);
+            
+            // Delete FPO Products
+            fpoProductRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Products for FPO ID: {}", id);
+            
+            // Delete FPO Notifications
+            fpoNotificationRepository.deleteByFpoId(id);
+            log.info("Deleted FPO Notifications for FPO ID: {}", id);
+            
+        } catch (Exception e) {
+            log.error("Error deleting related data for FPO ID {}: {}", id, e.getMessage());
+            throw new RuntimeException("Failed to delete FPO due to related data: " + e.getMessage());
+        }
+        
+        // Finally delete the FPO itself
         fpoRepository.delete(fpo);
         log.info("FPO deleted successfully with ID: {}", id);
     }

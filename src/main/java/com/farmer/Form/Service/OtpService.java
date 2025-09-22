@@ -146,5 +146,23 @@ public class OtpService {
             // Don't throw - OTP is still generated and stored
         }
     }
+
+    /**
+     * Returns the remaining cooldown time in seconds for a given email.
+     * Returns 0 if no cooldown is active or email is not found.
+     */
+    public long getRemainingCooldown(String rawEmail) {
+        String email = rawEmail.trim().toLowerCase();
+        OtpEntry existing = otpStore.get(email);
+        if (existing == null) {
+            return 0;
+        }
+        long now = Instant.now().toEpochMilli();
+        long elapsed = now - existing.issuedAt;
+        if (elapsed < RESEND_COOLDOWN_MS) {
+            return (RESEND_COOLDOWN_MS - elapsed) / 1_000;
+        }
+        return 0;
+    }
 }
  

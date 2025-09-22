@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+        .log { background-color: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 3px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>OTP Fix Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Single OTP Request (Should work quickly)</h3>
+        <input type="email" id="email1" placeholder="Enter email" value="test@example.com">
+        <button onclick="testSingleOTP()">Send OTP (Single Click)</button>
+        <div id="result1" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: Double OTP Request (Should handle gracefully)</h3>
+        <input type="email" id="email2" placeholder="Enter email" value="test2@example.com">
+        <button onclick="testDoubleOTP()">Send OTP (Double Click Test)</button>
+        <div id="result2" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Forgot Password OTP</h3>
+        <input type="email" id="email3" placeholder="Enter email" value="test3@example.com">
+        <button onclick="testForgotPassword()">Send Forgot Password OTP</button>
+        <div id="result3" class="log"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api/auth';
+        
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            element.textContent += `[${timestamp}] ${message}\n`;
+            element.className = `log ${type}`;
+        }
+
+        async function testSingleOTP() {
+            const email = document.getElementById('email1').value;
+            const resultDiv = document.getElementById('result1');
+            resultDiv.textContent = '';
+            
+            log('result1', `Testing single OTP request for: ${email}`);
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ emailOrPhone: email })
+                });
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('result1', `✅ SUCCESS: ${data.message} (${duration}ms)`, 'success');
+                } else {
+                    log('result1', `❌ ERROR ${response.status}: ${data.message} (${duration}ms)`, 'error');
+                }
+            } catch (error) {
+                log('result1', `❌ NETWORK ERROR: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDoubleOTP() {
+            const email = document.getElementById('email2').value;
+            const resultDiv = document.getElementById('result2');
+            resultDiv.textContent = '';
+            
+            log('result2', `Testing double OTP request for: ${email}`);
+            
+            try {
+                // First request
+                log('result2', 'Sending first OTP request...');
+                const startTime1 = Date.now();
+                const response1 = await fetch(`${API_BASE}/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ emailOrPhone: email })
+                });
+                const endTime1 = Date.now();
+                const duration1 = endTime1 - startTime1;
+                const data1 = await response1.json();
+                
+                if (response1.ok) {
+                    log('result2', `✅ First request SUCCESS: ${data1.message} (${duration1}ms)`, 'success');
+                } else {
+                    log('result2', `❌ First request ERROR ${response1.status}: ${data1.message} (${duration1}ms)`, 'error');
+                }
+                
+                // Wait 1 second then send second request
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                log('result2', 'Sending second OTP request (should be rate limited)...');
+                const startTime2 = Date.now();
+                const response2 = await fetch(`${API_BASE}/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ emailOrPhone: email })
+                });
+                const endTime2 = Date.now();
+                const duration2 = endTime2 - startTime2;
+                const data2 = await response2.json();
+                
+                if (response2.status === 429) {
+                    log('result2', `✅ Second request correctly rate limited: ${data2.message} (${duration2}ms)`, 'success');
+                } else if (response2.ok) {
+                    log('result2', `⚠️ Second request succeeded (unexpected): ${data2.message} (${duration2}ms)`, 'error');
+                } else {
+                    log('result2', `❌ Second request ERROR ${response2.status}: ${data2.message} (${duration2}ms)`, 'error');
+                }
+                
+            } catch (error) {
+                log('result2', `❌ NETWORK ERROR: ${error.message}`, 'error');
+            }
+        }
+
+        async function testForgotPassword() {
+            const email = document.getElementById('email3').value;
+            const resultDiv = document.getElementById('result3');
+            resultDiv.textContent = '';
+            
+            log('result3', `Testing forgot password OTP for: ${email}`);
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ emailOrPhone: email })
+                });
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('result3', `✅ SUCCESS: ${data.message} (${duration}ms)`, 'success');
+                } else {
+                    log('result3', `❌ ERROR ${response.status}: ${data.message} (${duration}ms)`, 'error');
+                }
+            } catch (error) {
+                log('result3', `❌ NETWORK ERROR: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
