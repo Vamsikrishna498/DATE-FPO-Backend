@@ -23,7 +23,7 @@ public class FPOMemberController {
     private final FPOService fpoService;
 
     @GetMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<List<FPOMemberDTO>> getFPOMembers(@PathVariable Long fpoId) {
         List<FPOMemberDTO> members = fpoService.getFPOMembers(fpoId);
         return ResponseEntity.ok(members);

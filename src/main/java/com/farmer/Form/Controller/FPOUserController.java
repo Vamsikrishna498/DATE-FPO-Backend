@@ -1,7 +1,6 @@
 package com.farmer.Form.Controller;
 
 import com.farmer.Form.Entity.FPO;
-import com.farmer.Form.Entity.User;
 import com.farmer.Form.Entity.Role;
 import com.farmer.Form.Entity.UserStatus;
 import com.farmer.Form.Repository.FPORepository;
@@ -14,7 +13,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -36,20 +34,43 @@ public class FPOUserController {
     public record CreateUserRequest(String email, String phoneNumber, String firstName, String lastName, String role, String password) {}
 
     @PostMapping
-    public ResponseEntity<com.farmer.Form.Entity.FPOUser> create(@PathVariable Long fpoId, @Valid @RequestBody CreateUserRequest req) {
-        FPO fpo = fpoRepository.findById(fpoId).orElseThrow(() -> new ResourceNotFoundException("FPO not found with id: " + fpoId));
-        com.farmer.Form.Entity.FPOUser user = com.farmer.Form.Entity.FPOUser.builder()
-                .fpo(fpo)
-                .firstName(req.firstName())
-                .lastName(req.lastName())
-                .email(req.email())
-                .phoneNumber(req.phoneNumber())
-                .passwordHash(passwordEncoder.encode(req.password()))
-                .role(Role.valueOf(req.role().toUpperCase()))
-                .status(UserStatus.APPROVED)
-                .build();
-        var saved = fpoUserRepository.save(user);
-        return ResponseEntity.ok(saved);
+    @PreAuthorize("hasRole('FPO') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> create(@PathVariable Long fpoId, @Valid @RequestBody CreateUserRequest req) {
+        try {
+            FPO fpo = fpoRepository.findById(fpoId)
+                    .orElseThrow(() -> new ResourceNotFoundException("FPO not found with id: " + fpoId));
+
+            // Allow only FPO-scoped roles for creation from FPO Admin dashboard
+            String roleUpper = req.role() == null ? "" : req.role().toUpperCase();
+            if (!("FPO".equals(roleUpper) || "EMPLOYEE".equals(roleUpper) || "FARMER".equals(roleUpper))) {
+                return ResponseEntity.status(403).body(java.util.Map.of(
+                        "message", "Only FPO, EMPLOYEE or FARMER user types can be created from this screen"
+                ));
+            }
+
+            com.farmer.Form.Entity.FPOUser user = com.farmer.Form.Entity.FPOUser.builder()
+                    .fpo(fpo)
+                    .firstName(req.firstName())
+                    .lastName(req.lastName())
+                    .email(req.email())
+                    .phoneNumber(req.phoneNumber())
+                    .passwordHash(passwordEncoder.encode(req.password()))
+                    .role(Role.valueOf(roleUpper))
+                    .status(UserStatus.APPROVED)
+                    .build();
+            var saved = fpoUserRepository.save(user);
+            return ResponseEntity.ok(saved);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "message", "Duplicate email or phone number for this FPO user",
+                    "error", ex.getMessage()
+            ));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "message", "Invalid role provided",
+                    "error", ex.getMessage()
+            ));
+        }
     }
 
     public record StatusRequest(boolean active) {}

@@ -21,6 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -55,14 +56,14 @@ public class FPOController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO') or hasRole('FARMER')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO') or hasRole('FARMER') or hasRole('EMPLOYEE')")
     public ResponseEntity<FPODTO> getFPOById(@PathVariable Long id) {
         FPODTO fpo = fpoService.getFPOById(id);
         return ResponseEntity.ok(fpo);
     }
 
     @GetMapping("/fpo-id/{fpoId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO') or hasRole('FARMER')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('FPO') or hasRole('FARMER') or hasRole('EMPLOYEE')")
     public ResponseEntity<FPODTO> getFPOByFpoId(@PathVariable String fpoId) {
         FPODTO fpo = fpoService.getFPOByFpoId(fpoId);
         return ResponseEntity.ok(fpo);
@@ -264,10 +265,29 @@ public class FPOController {
 
     // FPO-specific Farmer Management
     @PostMapping("/{fpoId}/farmers")
-    @PreAuthorize("hasRole('FPO')")
-    public ResponseEntity<Map<String, Object>> createFPOFarmer(@PathVariable Long fpoId, @RequestBody Map<String, Object> farmerData) {
+    @PreAuthorize("hasRole('FPO') or hasRole('ADMIN') or hasRole('EMPLOYEE')")
+    public ResponseEntity<Map<String, Object>> createFPOFarmer(@PathVariable Long fpoId, @RequestBody Map<String, Object> farmerData, Authentication authentication) {
         try {
             log.info("Creating FPO-specific farmer for FPO ID: {}", fpoId);
+
+            // Enforce that only users tied to this FPO can add its farmers
+            String requesterEmail = authentication != null ? authentication.getName() : null;
+            if (requesterEmail != null) {
+                var fpoUserOpt = fpoUserRepository.findByEmail(requesterEmail);
+                if (fpoUserOpt.isPresent()) {
+                    Long usersFpoId = fpoUserOpt.get().getFpo() != null ? fpoUserOpt.get().getFpo().getId() : null;
+                    if (usersFpoId == null || !usersFpoId.equals(fpoId)) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                                "error", "You are not authorized to add farmers for this FPO"
+                        ));
+                    }
+                } else {
+                    // If not an FPO user, deny (preAuthorize may allow global roles, but we scope by membership here)
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                            "error", "Only FPO-linked users can add farmers for this FPO"
+                    ));
+                }
+            }
             
             // Get FPO entity
             FPO fpo = fpoRepository.findById(fpoId)
@@ -275,10 +295,24 @@ public class FPOController {
             
             // Create farmer in global system
             FarmerDTO farmerDTO = new FarmerDTO();
+            // Personal details required by validation
+            farmerDTO.setSalutation((String) farmerData.getOrDefault("salutation", "Mr"));
             farmerDTO.setFirstName((String) farmerData.get("firstName"));
             farmerDTO.setLastName((String) farmerData.get("lastName"));
+            farmerDTO.setGender((String) farmerData.getOrDefault("gender", "Male"));
+            farmerDTO.setNationality((String) farmerData.getOrDefault("nationality", "Indian"));
+            Object dobRaw = farmerData.get("dateOfBirth");
+            if (dobRaw instanceof String && !((String) dobRaw).isBlank()) {
+                try {
+                    farmerDTO.setDateOfBirth(LocalDate.parse((String) dobRaw));
+                } catch (Exception e) {
+                    log.warn("Invalid dateOfBirth format, expected yyyy-MM-dd: {}", dobRaw);
+                }
+            }
             farmerDTO.setEmail((String) farmerData.get("email"));
             farmerDTO.setContactNumber((String) farmerData.get("contactNumber"));
+            // Address
+            farmerDTO.setCountry((String) farmerData.getOrDefault("country", "India"));
             farmerDTO.setVillage((String) farmerData.get("village"));
             farmerDTO.setDistrict((String) farmerData.get("district"));
             farmerDTO.setState((String) farmerData.get("state"));

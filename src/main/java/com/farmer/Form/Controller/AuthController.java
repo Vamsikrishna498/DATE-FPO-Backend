@@ -106,6 +106,10 @@ public class AuthController {
         if (user == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
         }
+        // Block login if FPO user is not active/approved
+        if (user.getStatus() != com.farmer.Form.Entity.UserStatus.APPROVED) {
+            return ResponseEntity.status(401).body(Map.of("message", "Account inactive. Contact FPO admin."));
+        }
         
         FPO fpo = user.getFpo();
         
