@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified RBAC System Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Simplified RBAC System Test</h1>
+    <p>This page tests the simplified Users & Roles Management system that works with the existing UserRole structure.</p>
+
+    <div class="test-section">
+        <h2>Test Role Management</h2>
+        <button onclick="testGetAllRoles()">Get All Roles</button>
+        <button onclick="testCreateRole()">Create Test Role</button>
+        <button onclick="testGetActiveRoles()">Get Active Roles</button>
+        <div id="roleResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test User Management</h2>
+        <button onclick="testGetAllUsers()">Get All Users</button>
+        <button onclick="testAssignRole()">Test Role Assignment</button>
+        <div id="userResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Dashboard Data</h2>
+        <button onclick="testDashboardData()">Get Dashboard Data</button>
+        <div id="dashboardResults"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8080/api';
+        let authToken = null;
+
+        // Helper function to make API calls
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            };
+
+            if (authToken) {
+                options.headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(`${BASE_URL}${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${result.message || 'Unknown error'}`);
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+
+        // Test functions
+        async function testGetAllRoles() {
+            try {
+                const result = await apiCall('/users-roles-management/roles');
+                displayResult('roleResults', 'success', 'Get All Roles', result);
+            } catch (error) {
+                displayResult('roleResults', 'error', 'Get All Roles Failed', error.message);
+            }
+        }
+
+        async function testCreateRole() {
+            const testRole = {
+                roleName: 'TEST_ROLE_' + Date.now(),
+                description: 'Test role created by automated test',
+                allowedModules: ['EMPLOYEE', 'FARMER'],
+                permissions: ['VIEW', 'ADD']
+            };
+
+            try {
+                const result = await apiCall('/users-roles-management/roles', 'POST', testRole);
+                displayResult('roleResults', 'success', 'Create Role', result);
+            } catch (error) {
+                displayResult('roleResults', 'error', 'Create Role Failed', error.message);
+            }
+        }
+
+        async function testGetActiveRoles() {
+            try {
+                const result = await apiCall('/users-roles-management/roles/active');
+                displayResult('roleResults', 'success', 'Get Active Roles', result);
+            } catch (error) {
+                displayResult('roleResults', 'error', 'Get Active Roles Failed', error.message);
+            }
+        }
+
+        async function testGetAllUsers() {
+            try {
+                const result = await apiCall('/users-roles-management/users');
+                displayResult('userResults', 'success', 'Get All Users', result);
+            } catch (error) {
+                displayResult('userResults', 'error', 'Get All Users Failed', error.message);
+            }
+        }
+
+        async function testAssignRole() {
+            // This is a test assignment - you'll need to adjust the IDs based on your actual data
+            const testAssignment = {
+                userId: 1, // Replace with actual user ID
+                roleId: 1  // Replace with actual role ID
+            };
+
+            try {
+                const result = await apiCall('/users-roles-management/assign-role', 'POST', testAssignment);
+                displayResult('userResults', 'success', 'Assign Role Test', result);
+            } catch (error) {
+                displayResult('userResults', 'error', 'Assign Role Test Failed', error.message);
+            }
+        }
+
+        async function testDashboardData() {
+            try {
+                const result = await apiCall('/users-roles-management/dashboard-data');
+                displayResult('dashboardResults', 'success', 'Dashboard Data', result);
+            } catch (error) {
+                displayResult('dashboardResults', 'error', 'Dashboard Data Failed', error.message);
+            }
+        }
+
+        function displayResult(containerId, type, title, data) {
+            const container = document.getElementById(containerId);
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `
+                <h4>${title}</h4>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            container.appendChild(resultDiv);
+        }
+
+        // Auto-run basic test on page load
+        window.onload = function() {
+            setTimeout(() => {
+                testGetAllRoles();
+                testGetAllUsers();
+                testDashboardData();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

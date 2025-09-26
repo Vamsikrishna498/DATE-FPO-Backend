@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Original API</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Test Original API</h1>
+    <p>This tests the original /api/farmers endpoint that was working before.</p>
+
+    <button onclick="testOriginalAPI()">Test Original /api/farmers</button>
+    <button onclick="testWithMultipart()">Test with Multipart Data</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function testOriginalAPI() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const testFarmer = {
+                salutation: "Mr",
+                firstName: "Original",
+                lastName: "Test" + Date.now(),
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: "9876543210",
+                nationality: "Indian",
+                country: "India",
+                state: "Andhra Pradesh",
+                district: "Kadapa",
+                village: "Test Village",
+                pincode: "516001",
+                email: "original" + Date.now() + "@example.com"
+            };
+
+            try {
+                const formData = new FormData();
+                formData.append('farmerDto', JSON.stringify(testFarmer));
+
+                console.log('Testing original API with data:', testFarmer);
+
+                const response = await fetch('http://localhost:8080/api/farmers', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('Original API response:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">✅ Original API works!</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">❌ Original API failed: ' + (result.message || 'Unknown error') + '</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                console.error('Original API error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Original API Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testWithMultipart() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const testFarmer = {
+                salutation: "Mr",
+                firstName: "Multipart",
+                lastName: "Test" + Date.now(),
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: "9876543210",
+                nationality: "Indian",
+                country: "India",
+                state: "Andhra Pradesh",
+                district: "Kadapa",
+                village: "Test Village",
+                pincode: "516001",
+                email: "multipart" + Date.now() + "@example.com"
+            };
+
+            try {
+                const formData = new FormData();
+                formData.append('farmerDto', JSON.stringify(testFarmer));
+                
+                // Add a dummy file to test multipart
+                const dummyFile = new File(['dummy content'], 'test.txt', { type: 'text/plain' });
+                formData.append('photo', dummyFile);
+
+                console.log('Testing multipart with data:', testFarmer);
+
+                const response = await fetch('http://localhost:8080/api/farmers', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('Multipart response:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">✅ Multipart works!</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">❌ Multipart failed: ' + (result.message || 'Unknown error') + '</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                console.error('Multipart error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Multipart Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

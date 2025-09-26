@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Farmer ID Generation</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Test Farmer ID Generation</h1>
+    <p>This will test the complete flow from CodeFormat creation to farmer ID generation.</p>
+
+    <button onclick="testCompleteFlow()">Test Complete Flow</button>
+    <button onclick="checkCodeFormats()">Check Code Formats</button>
+    <button onclick="testGenerateCode()">Test Generate Code</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function testCompleteFlow() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                // Step 1: Check existing code formats
+                document.getElementById('result').innerHTML = '<p class="info">Step 1: Checking existing code formats...</p>';
+                const formatsResponse = await fetch('http://localhost:8080/api/config/code-formats', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const formats = await formatsResponse.json();
+                console.log('Existing code formats:', formats);
+
+                // Step 2: Create farmer code format if it doesn't exist
+                let farmerFormat = formats.find(f => f.codeType === 'FARMER');
+                if (!farmerFormat) {
+                    document.getElementById('result').innerHTML += '<p class="info">Step 2: Creating farmer code format...</p>';
+                    const createResponse = await fetch('http://localhost:8080/api/config/code-formats', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            codeType: 'FARMER',
+                            prefix: 'DATE-FAR',
+                            startingNumber: 1,
+                            description: 'Farmer identification code format'
+                        })
+                    });
+                    farmerFormat = await createResponse.json();
+                    console.log('Created farmer format:', farmerFormat);
+                } else {
+                    document.getElementById('result').innerHTML += '<p class="info">Step 2: Found existing farmer format: ' + farmerFormat.prefix + '</p>';
+                }
+
+                // Step 3: Test code generation
+                document.getElementById('result').innerHTML += '<p class="info">Step 3: Testing code generation...</p>';
+                const generateResponse = await fetch('http://localhost:8080/api/config/code-formats/generate/FARMER', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const generatedCode = await generateResponse.json();
+                console.log('Generated code:', generatedCode);
+
+                document.getElementById('result').innerHTML += '<p class="success">✅ Complete flow test successful!</p>';
+                document.getElementById('result').innerHTML += '<p class="info">Generated farmer code: ' + generatedCode.nextCode + '</p>';
+
+            } catch (error) {
+                console.error('Test failed:', error);
+                document.getElementById('result').innerHTML += '<p class="error">❌ Test failed: ' + error.message + '</p>';
+            }
+        }
+
+        async function checkCodeFormats() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/config/code-formats', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const formats = await response.json();
+                console.log('Code formats:', formats);
+
+                if (response.ok) {
+                    let html = '<p class="success">Found ' + formats.length + ' code formats:</p>';
+                    formats.forEach(format => {
+                        html += '<div style="border: 1px solid #ccc; margin: 10px 0; padding: 10px;">';
+                        html += '<strong>Type:</strong> ' + format.codeType + '<br>';
+                        html += '<strong>Prefix:</strong> ' + format.prefix + '<br>';
+                        html += '<strong>Starting Number:</strong> ' + format.startingNumber + '<br>';
+                        html += '<strong>Current Number:</strong> ' + format.currentNumber + '<br>';
+                        html += '<strong>Next Code:</strong> ' + format.prefix + '-' + String(format.currentNumber + 1).padStart(5, '0') + '<br>';
+                        html += '<strong>Active:</strong> ' + (format.isActive ? 'Yes' : 'No') + '<br>';
+                        html += '</div>';
+                    });
+                    document.getElementById('result').innerHTML = html;
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">Error: ' + (formats.message || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Fetch Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testGenerateCode() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/config/code-formats/generate/FARMER', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const result = await response.json();
+                console.log('Generated code:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">Generated farmer code: ' + result.nextCode + '</p>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">Error: ' + (result.message || result.error || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Fetch Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

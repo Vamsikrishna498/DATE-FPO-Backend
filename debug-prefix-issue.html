@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Prefix Issue</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Debug Prefix Issue</h1>
+    <p>Let's check what's actually in the database and test the ID generation.</p>
+
+    <button onclick="checkDatabaseFormats()">Check Database Formats</button>
+    <button onclick="testGenerateCode()">Test Generate Code</button>
+    <button onclick="createTestFarmer()">Create Test Farmer</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function checkDatabaseFormats() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/config/code-formats', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const formats = await response.json();
+                console.log('Database formats:', formats);
+
+                if (response.ok) {
+                    let html = '<h3>Database Code Formats:</h3>';
+                    formats.forEach(format => {
+                        html += '<div style="border: 1px solid #ccc; margin: 10px 0; padding: 10px;">';
+                        html += '<strong>Type:</strong> ' + format.codeType + '<br>';
+                        html += '<strong>Prefix:</strong> "' + format.prefix + '" (length: ' + format.prefix.length + ')<br>';
+                        html += '<strong>Starting Number:</strong> ' + format.startingNumber + '<br>';
+                        html += '<strong>Current Number:</strong> ' + format.currentNumber + '<br>';
+                        html += '<strong>Next Code:</strong> ' + format.prefix + '-' + String(format.currentNumber + 1).padStart(5, '0') + '<br>';
+                        html += '<strong>Active:</strong> ' + (format.isActive ? 'Yes' : 'No') + '<br>';
+                        html += '</div>';
+                    });
+                    document.getElementById('result').innerHTML = html;
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">Error: ' + (formats.message || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Fetch Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testGenerateCode() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/config/code-formats/generate/FARMER', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const result = await response.json();
+                console.log('Generated code:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">Generated farmer code: ' + result.nextCode + '</p>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">Error: ' + (result.message || result.error || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Fetch Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function createTestFarmer() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const testFarmer = {
+                salutation: "Mr",
+                firstName: "Test",
+                lastName: "Farmer",
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: "9876543210",
+                nationality: "Indian",
+                country: "India",
+                state: "Andhra Pradesh",
+                district: "Kadapa",
+                village: "Test Village",
+                pincode: "516001",
+                email: "test" + Date.now() + "@example.com"
+            };
+
+            try {
+                const response = await fetch('http://localhost:8080/api/super-admin/farmers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(testFarmer)
+                });
+
+                const result = await response.json();
+                console.log('Created farmer:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">Test farmer created with ID: ' + result.id + '</p>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">Error creating farmer: ' + (result.message || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Fetch Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

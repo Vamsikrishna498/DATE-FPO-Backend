@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Personalization Integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Personalization Integration</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Create Farmer Code Format</h3>
+        <button onclick="createFarmerCodeFormat()">Create Farmer Code Format</button>
+        <div id="farmer-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Test Create Employee Code Format</h3>
+        <button onclick="createEmployeeCodeFormat()">Create Employee Code Format</button>
+        <div id="employee-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Test Get All Code Formats</h3>
+        <button onclick="getAllCodeFormats()">Get All Code Formats</button>
+        <div id="formats-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Test Generate Next Code</h3>
+        <button onclick="generateNextCode('FARMER')">Generate Next Farmer Code</button>
+        <button onclick="generateNextCode('EMPLOYEE')">Generate Next Employee Code</button>
+        <div id="generate-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(API_BASE + endpoint, options);
+                const result = await response.json();
+                
+                return {
+                    success: response.ok,
+                    data: result,
+                    status: response.status
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function createFarmerCodeFormat() {
+            const result = await apiCall('/config/code-formats', 'POST', {
+                codeType: 'FARMER',
+                prefix: 'DATE-FAR',
+                startingNumber: 1,
+                description: 'Farmer code format for DATE system',
+                isActive: true
+            });
+            
+            const resultDiv = document.getElementById('farmer-result');
+            if (result.success) {
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `<strong>✅ Success:</strong> Farmer code format created successfully!<br>${JSON.stringify(result.data, null, 2)}`;
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>❌ Error:</strong> ${result.error || result.data?.message || 'Failed to create farmer code format'}`;
+            }
+        }
+
+        async function createEmployeeCodeFormat() {
+            const result = await apiCall('/config/code-formats', 'POST', {
+                codeType: 'EMPLOYEE',
+                prefix: 'DATE-EMP',
+                startingNumber: 1,
+                description: 'Employee code format for DATE system',
+                isActive: true
+            });
+            
+            const resultDiv = document.getElementById('employee-result');
+            if (result.success) {
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `<strong>✅ Success:</strong> Employee code format created successfully!<br>${JSON.stringify(result.data, null, 2)}`;
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>❌ Error:</strong> ${result.error || result.data?.message || 'Failed to create employee code format'}`;
+            }
+        }
+
+        async function getAllCodeFormats() {
+            const result = await apiCall('/config/code-formats');
+            
+            const resultDiv = document.getElementById('formats-result');
+            if (result.success) {
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `<strong>✅ Success:</strong> Code formats retrieved!<br>${JSON.stringify(result.data, null, 2)}`;
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>❌ Error:</strong> ${result.error || result.data?.message || 'Failed to get code formats'}`;
+            }
+        }
+
+        async function generateNextCode(codeType) {
+            const result = await apiCall(`/config/code-formats/${codeType.toLowerCase()}/generate-next`);
+            
+            const resultDiv = document.getElementById('generate-result');
+            if (result.success) {
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `<strong>✅ Success:</strong> Generated next ${codeType} code!<br>${JSON.stringify(result.data, null, 2)}`;
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>❌ Error:</strong> ${result.error || result.data?.message || 'Failed to generate next code'}`;
+            }
+        }
+
+        // Auto-load code formats on page load
+        window.onload = function() {
+            getAllCodeFormats();
+        };
+    </script>
+</body>
+</html>

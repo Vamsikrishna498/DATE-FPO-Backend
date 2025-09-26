@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBAC System Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .endpoint-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .endpoint-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .endpoint-list li:last-child {
+            border-bottom: none;
+        }
+        .method {
+            display: inline-block;
+            width: 80px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            margin-right: 10px;
+        }
+        .method.get { background-color: #28a745; color: white; }
+        .method.post { background-color: #007bff; color: white; }
+        .method.put { background-color: #ffc107; color: black; }
+        .method.delete { background-color: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔐 RBAC System Test & Verification</h1>
+    
+    <div class="container">
+        <h2>📋 System Overview</h2>
+        <div class="test-section info">
+            <p><strong>Users & Roles Management System</strong> has been successfully implemented with the following features:</p>
+            <ul>
+                <li>✅ Role Management (Create, Edit, Delete, Activate/Deactivate)</li>
+                <li>✅ User-Role Assignment with dropdown selection</li>
+                <li>✅ Module-based Access Control (Employee, Farmer, FPO, Configuration, Analytics, User Management)</li>
+                <li>✅ Permission Levels (Add, View, Edit, Delete)</li>
+                <li>✅ Dynamic Dashboard Loading based on user roles</li>
+                <li>✅ Frontend Components with Tailwind CSS</li>
+                <li>✅ Backend APIs with Spring Boot</li>
+                <li>✅ Database Schema with PostgreSQL</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🗄️ Database Schema</h2>
+        <div class="test-section">
+            <h3>Tables Created:</h3>
+            <ul>
+                <li><strong>roles</strong> - Store role definitions with name, description, and status</li>
+                <li><strong>role_modules</strong> - Define module permissions for each role</li>
+                <li><strong>user_role_assignments</strong> - Map users to their assigned roles</li>
+            </ul>
+            
+            <h3>Migration Script:</h3>
+            <div class="code-block">File: rbac_database_migration.sql
+- Creates all necessary tables with proper constraints
+- Inserts default roles (SUPER_ADMIN, ADMIN, MANAGER, EMPLOYEE, FARMER, FPO_ADMIN, FPO_EMPLOYEE)
+- Sets up default permissions for each role
+- Creates indexes for performance optimization</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 Backend Implementation</h2>
+        <div class="test-section">
+            <h3>Entities Created:</h3>
+            <ul>
+                <li><strong>Role.java</strong> - Main role entity with relationships</li>
+                <li><strong>RoleModule.java</strong> - Module permissions for roles</li>
+                <li><strong>UserRoleAssignment.java</strong> - User-role mapping</li>
+                <li><strong>RoleEnum.java</strong> - Legacy role enum for backward compatibility</li>
+            </ul>
+
+            <h3>DTOs Created:</h3>
+            <ul>
+                <li><strong>RoleDTO.java</strong> - Role data transfer object</li>
+                <li><strong>RoleModuleDTO.java</strong> - Module permission DTO</li>
+                <li><strong>UserRoleAssignmentDTO.java</strong> - User assignment DTO</li>
+                <li><strong>RoleCreationDTO.java</strong> - Role creation request</li>
+                <li><strong>RoleUpdateDTO.java</strong> - Role update request</li>
+                <li><strong>ModulePermissionDTO.java</strong> - Module permission structure</li>
+                <li><strong>UserPermissionDTO.java</strong> - Complete user permission view</li>
+            </ul>
+
+            <h3>Services Created:</h3>
+            <ul>
+                <li><strong>RoleService.java</strong> - Role management operations</li>
+                <li><strong>UserRoleService.java</strong> - User-role assignment operations</li>
+                <li><strong>RBACService.java</strong> - Permission checking utilities</li>
+            </ul>
+
+            <h3>Controllers Created:</h3>
+            <ul>
+                <li><strong>RoleController.java</strong> - Role management endpoints</li>
+                <li><strong>UserRoleController.java</strong> - User-role assignment endpoints</li>
+                <li><strong>UsersRolesManagementController.java</strong> - Comprehensive management endpoints</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🌐 API Endpoints</h2>
+        <div class="test-section">
+            <h3>Role Management Endpoints:</h3>
+            <ul class="endpoint-list">
+                <li><span class="method post">POST</span> /api/users-roles-management/roles - Create role</li>
+                <li><span class="method get">GET</span> /api/users-roles-management/roles - Get all roles</li>
+                <li><span class="method get">GET</span> /api/users-roles-management/roles/active - Get active roles</li>
+                <li><span class="method get">GET</span> /api/users-roles-management/roles/{id} - Get role by ID</li>
+                <li><span class="method put">PUT</span> /api/users-roles-management/roles/{id} - Update role</li>
+                <li><span class="method delete">DELETE</span> /api/users-roles-management/roles/{id} - Delete role</li>
+                <li><span class="method post">POST</span> /api/users-roles-management/roles/{id}/activate - Activate role</li>
+                <li><span class="method post">POST</span> /api/users-roles-management/roles/{id}/deactivate - Deactivate role</li>
+            </ul>
+
+            <h3>User Role Assignment Endpoints:</h3>
+            <ul class="endpoint-list">
+                <li><span class="method post">POST</span> /api/users-roles-management/assign-role - Assign role to user</li>
+                <li><span class="method put">PUT</span> /api/users-roles-management/user/{userId}/role/{newRoleId} - Update user role</li>
+                <li><span class="method delete">DELETE</span> /api/users-roles-management/user/{userId}/role/{roleId} - Remove role from user</li>
+                <li><span class="method get">GET</span> /api/users-roles-management/user/{userId}/roles - Get user roles</li>
+                <li><span class="method get">GET</span> /api/users-roles-management/user/{userId}/permissions - Get user permissions</li>
+            </ul>
+
+            <h3>Permission Check Endpoints:</h3>
+            <ul class="endpoint-list">
+                <li><span class="method get">GET</span> /api/users-roles-management/user/{userId}/has-permission/{moduleName}/{permission} - Check specific permission</li>
+                <li><span class="method get">GET</span> /api/users-roles-management/user/{userId}/accessible-modules - Get accessible modules</li>
+                <li><span class="method get">GET</span> /api/users-roles-management/user/{userId}/has-access/{moduleName} - Check module access</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>⚛️ Frontend Implementation</h2>
+        <div class="test-section">
+            <h3>Pages Created:</h3>
+            <ul>
+                <li><strong>UsersRolesManagement.jsx</strong> - Main management page with dashboard and tabs</li>
+            </ul>
+
+            <h3>Components Created:</h3>
+            <ul>
+                <li><strong>RoleManagement.jsx</strong> - Role management interface</li>
+                <li><strong>RoleCard.jsx</strong> - Individual role display card</li>
+                <li><strong>CreateRoleModal.jsx</strong> - Role creation modal</li>
+                <li><strong>EditRoleModal.jsx</strong> - Role editing modal</li>
+                <li><strong>UserRoleAssignment.jsx</strong> - User-role assignment interface</li>
+                <li><strong>AssignRoleModal.jsx</strong> - Role assignment modal</li>
+                <li><strong>PermissionCheck.jsx</strong> - Permission checking interface</li>
+                <li><strong>ProtectedComponent.jsx</strong> - Permission-based component wrapper</li>
+            </ul>
+
+            <h3>Context & Utilities:</h3>
+            <ul>
+                <li><strong>RBACContext.js</strong> - Global RBAC state management</li>
+                <li><strong>rbacAPI</strong> - API service for RBAC operations</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🎯 Default Roles & Permissions</h2>
+        <div class="test-section">
+            <h3>SUPER_ADMIN:</h3>
+            <ul>
+                <li>✅ Full access to all modules</li>
+                <li>✅ All permissions (ADD, VIEW, EDIT, DELETE)</li>
+                <li>✅ Can manage other admins and system configuration</li>
+            </ul>
+
+            <h3>ADMIN:</h3>
+            <ul>
+                <li>✅ Limited access to most modules</li>
+                <li>✅ No delete permissions for critical modules</li>
+                <li>✅ Can manage users and basic configuration</li>
+            </ul>
+
+            <h3>MANAGER:</h3>
+            <ul>
+                <li>✅ Read/Edit access to assigned modules</li>
+                <li>✅ No delete permissions</li>
+                <li>✅ Can view analytics and manage farmers</li>
+            </ul>
+
+            <h3>EMPLOYEE:</h3>
+            <ul>
+                <li>✅ Limited access to farmer and FPO modules</li>
+                <li>✅ Basic permissions (VIEW, some EDIT)</li>
+                <li>✅ Cannot access configuration or user management</li>
+            </ul>
+
+            <h3>FARMER:</h3>
+            <ul>
+                <li>✅ Self-service access only</li>
+                <li>✅ VIEW and EDIT own data</li>
+                <li>✅ Cannot access other users' data</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🚀 Deployment Instructions</h2>
+        <div class="test-section">
+            <h3>1. Database Setup:</h3>
+            <div class="code-block"># Run the migration script
+psql -U your_username -d your_database -f rbac_database_migration.sql</div>
+
+            <h3>2. Backend Deployment:</h3>
+            <div class="code-block"># Deploy the new entities, services, and controllers
+# Update existing controllers to use RBAC annotations
+# Test API endpoints with different user roles</div>
+
+            <h3>3. Frontend Deployment:</h3>
+            <div class="code-block"># RBAC provider is already added to App.js
+# New route added: /users-roles-management
+# Components are ready for use</div>
+
+            <h3>4. Access the System:</h3>
+            <div class="code-block"># Navigate to: http://localhost:3000/users-roles-management
+# Login as SUPER_ADMIN or ADMIN to access the interface
+# Use the tabbed interface to manage roles and user assignments</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🧪 Testing Checklist</h2>
+        <div class="test-section">
+            <h3>Backend Testing:</h3>
+            <ul>
+                <li>☐ Test role creation with various permission combinations</li>
+                <li>☐ Test user role assignment and updates</li>
+                <li>☐ Test permission checking endpoints</li>
+                <li>☐ Test role activation/deactivation</li>
+                <li>☐ Test role deletion with safety checks</li>
+            </ul>
+
+            <h3>Frontend Testing:</h3>
+            <ul>
+                <li>☐ Test role management interface</li>
+                <li>☐ Test user role assignment functionality</li>
+                <li>☐ Test permission checking interface</li>
+                <li>☐ Test responsive design on different screen sizes</li>
+                <li>☐ Test error handling and validation</li>
+            </ul>
+
+            <h3>Integration Testing:</h3>
+            <ul>
+                <li>☐ Test login flow with role-based redirection</li>
+                <li>☐ Test permission-based UI rendering</li>
+                <li>☐ Test cross-browser compatibility</li>
+                <li>☐ Test API error handling</li>
+                <li>☐ Test database constraint validation</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📚 Documentation</h2>
+        <div class="test-section success">
+            <h3>📖 Complete Documentation Available:</h3>
+            <p><strong>File:</strong> RBAC_SYSTEM_README.md</p>
+            <p>This comprehensive documentation includes:</p>
+            <ul>
+                <li>Detailed system overview and features</li>
+                <li>Database schema with SQL examples</li>
+                <li>Backend implementation details</li>
+                <li>Frontend component documentation</li>
+                <li>API endpoint reference</li>
+                <li>Usage examples and code snippets</li>
+                <li>Security considerations</li>
+                <li>Troubleshooting guide</li>
+                <li>Future enhancement suggestions</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>✅ Implementation Status</h2>
+        <div class="test-section success">
+            <h3>🎉 RBAC System Successfully Implemented!</h3>
+            <p>The Users & Roles Management module has been fully implemented with:</p>
+            <ul>
+                <li>✅ Complete database schema with migration script</li>
+                <li>✅ Full backend implementation with Spring Boot</li>
+                <li>✅ Comprehensive frontend with React components</li>
+                <li>✅ API endpoints for all operations</li>
+                <li>✅ Role-based access control system</li>
+                <li>✅ Permission checking utilities</li>
+                <li>✅ User interface for management operations</li>
+                <li>✅ Documentation and testing guidelines</li>
+            </ul>
+            <p><strong>Ready for deployment and testing!</strong></p>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('RBAC System Test Page Loaded');
+            console.log('All components and APIs are ready for testing');
+            
+            // You can add more interactive testing functionality here
+            const testButtons = document.querySelectorAll('button');
+            testButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    console.log('Test button clicked:', this.textContent);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

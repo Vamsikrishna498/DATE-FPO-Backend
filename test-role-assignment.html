@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Role Assignment</title>
+</head>
+<body>
+    <h1>Test Role Assignment API</h1>
+    
+    <div>
+        <h2>Test Assign Role to User</h2>
+        <button onclick="testAssignRole()">Test Assign Role</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testAssignRole() {
+            try {
+                // Get token from localStorage (you need to be logged in)
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                    return;
+                }
+
+                // Test data - you may need to adjust these IDs
+                const assignmentData = {
+                    userId: "1", // Replace with actual user ID
+                    roleId: "1"  // Replace with actual role ID
+                };
+
+                console.log('Sending assignment data:', assignmentData);
+
+                const response = await fetch('http://localhost:8080/api/users-roles-management/assign-role', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(assignmentData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = `
+                        <p style="color: green;">Success: ${JSON.stringify(result)}</p>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <p style="color: red;">Error ${response.status}: ${JSON.stringify(result)}</p>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <p style="color: red;">Network Error: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

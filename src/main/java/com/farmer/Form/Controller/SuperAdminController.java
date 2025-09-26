@@ -11,9 +11,13 @@ import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.EmployeeService;
 import com.farmer.Form.Service.DashboardService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.List;
 import java.util.Map;
@@ -144,8 +148,26 @@ public class SuperAdminController {
         return ResponseEntity.ok(farmerService.getFarmerRawById(id));
     }
 
-    @PostMapping("/farmers")
-    public ResponseEntity<Farmer> createFarmer(@RequestBody Farmer farmer) {
+    @PostMapping(value = "/farmers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Farmer> createFarmer(
+            @RequestPart("farmerDto") String farmerDtoJson,
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @RequestPart(value = "passbookPhoto", required = false) MultipartFile passbookPhoto,
+            @RequestPart(value = "aadhaar", required = false) MultipartFile aadhaar,
+            @RequestPart(value = "soilTestCertificate", required = false) MultipartFile soilTestCertificate
+    ) throws JsonProcessingException {
+        
+        // Parse the JSON to Farmer entity
+        ObjectMapper objectMapper = new ObjectMapper();
+        Farmer farmer = objectMapper.readValue(farmerDtoJson, Farmer.class);
+        
+        // For now, we'll create the farmer without file handling in SuperAdmin
+        // The ID card generation will still work
+        return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
+    }
+    
+    @PostMapping(value = "/farmers/json", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Farmer> createFarmerJson(@RequestBody Farmer farmer) {
         return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
     }
 

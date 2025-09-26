@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Farmer Creation</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Test Farmer Creation</h1>
+    <p>This tests both JSON and multipart farmer creation endpoints.</p>
+
+    <button onclick="testJsonCreation()">Test JSON Creation</button>
+    <button onclick="testMultipartCreation()">Test Multipart Creation</button>
+    <button onclick="testSuperAdminCreation()">Test SuperAdmin Creation</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function testJsonCreation() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const testFarmer = {
+                salutation: "Mr",
+                firstName: "Test",
+                lastName: "Farmer" + Date.now(),
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: "9876543210",
+                nationality: "Indian",
+                country: "India",
+                state: "Andhra Pradesh",
+                district: "Kadapa",
+                village: "Test Village",
+                pincode: "516001",
+                email: "test" + Date.now() + "@example.com"
+            };
+
+            try {
+                const response = await fetch('http://localhost:8080/api/super-admin/farmers/json', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(testFarmer)
+                });
+
+                const result = await response.json();
+                console.log('JSON Creation response:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">✅ JSON creation successful!</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">❌ JSON creation failed: ' + (result.message || 'Unknown error') + '</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                console.error('JSON creation error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">JSON Creation Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testMultipartCreation() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const testFarmer = {
+                salutation: "Mr",
+                firstName: "Multipart",
+                lastName: "Test" + Date.now(),
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: "9876543210",
+                nationality: "Indian",
+                country: "India",
+                state: "Andhra Pradesh",
+                district: "Kadapa",
+                village: "Test Village",
+                pincode: "516001",
+                email: "multipart" + Date.now() + "@example.com"
+            };
+
+            try {
+                const formData = new FormData();
+                formData.append('farmerDto', JSON.stringify(testFarmer));
+
+                const response = await fetch('http://localhost:8080/api/super-admin/farmers', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('Multipart creation response:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">✅ Multipart creation successful!</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">❌ Multipart creation failed: ' + (result.message || 'Unknown error') + '</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                console.error('Multipart creation error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">Multipart Creation Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testSuperAdminCreation() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const testFarmer = {
+                salutation: "Mr",
+                firstName: "SuperAdmin",
+                lastName: "Test" + Date.now(),
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: "9876543210",
+                nationality: "Indian",
+                country: "India",
+                state: "Andhra Pradesh",
+                district: "Kadapa",
+                village: "Test Village",
+                pincode: "516001",
+                email: "superadmin" + Date.now() + "@example.com"
+            };
+
+            try {
+                const formData = new FormData();
+                formData.append('farmerDto', JSON.stringify(testFarmer));
+
+                console.log('Testing SuperAdmin creation with data:', testFarmer);
+
+                const response = await fetch('http://localhost:8080/api/super-admin/farmers', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('SuperAdmin creation response:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<p class="success">✅ SuperAdmin creation successful!</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p class="error">❌ SuperAdmin creation failed: ' + (result.message || 'Unknown error') + '</p>';
+                    document.getElementById('result').innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                console.error('SuperAdmin creation error:', error);
+                document.getElementById('result').innerHTML = '<p class="error">SuperAdmin Creation Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

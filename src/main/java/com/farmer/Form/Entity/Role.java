@@ -5,5 +5,5 @@ public enum Role {
     ADMIN,
     EMPLOYEE,
     FARMER,
-    FPO // Optional for future use
-} 
+    FPO
+}

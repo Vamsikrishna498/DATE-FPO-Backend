@@ -1,13 +1,17 @@
 package com.farmer.Form.Service.Impl;
 
 import com.farmer.Form.Entity.IdCard;
+import com.farmer.Form.Entity.CodeFormat;
 import com.farmer.Form.Repository.IdCardRepository;
+import com.farmer.Form.Repository.CodeFormatRepository;
 import com.farmer.Form.Service.IdGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -15,6 +19,9 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     
     @Autowired
     private IdCardRepository idCardRepository;
+    
+    @Autowired
+    private CodeFormatRepository codeFormatRepository;
     
     // State code mapping
     private static final Map<String, String> STATE_CODES = new HashMap<>();
@@ -195,19 +202,76 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     
     @Override
     public String generateFarmerId(String state, String district) {
-        String state2 = normalizeTwoLetters(state);
-        String district2 = normalizeTwoLetters(district);
-        return generateId("FAM", state2, district2);
+        System.out.println("🔄 Generating farmer ID for state: " + state + ", district: " + district);
+        String generatedId = generateIdFromCodeFormat(CodeFormat.CodeType.FARMER);
+        System.out.println("✅ Generated farmer ID: " + generatedId);
+        return generatedId;
     }
     
     @Override
     public String generateEmployeeId(String state, String district) {
         System.out.println("🔄 Generating employee ID for state: " + state + ", district: " + district);
-        String state2 = normalizeTwoLetters(state);
-        String district2 = normalizeTwoLetters(district);
-        System.out.println("📍 Normalized state: " + state2 + ", district: " + district2);
-        String generatedId = generateId("EMP", state2, district2);
+        String generatedId = generateIdFromCodeFormat(CodeFormat.CodeType.EMPLOYEE);
         System.out.println("✅ Generated employee ID: " + generatedId);
+        return generatedId;
+    }
+    
+    /**
+     * Generate ID using the configured CodeFormat from database
+     */
+    private String generateIdFromCodeFormat(CodeFormat.CodeType codeType) {
+        System.out.println("🔍 Looking for CodeFormat for type: " + codeType);
+        
+        // First, let's see what's in the database
+        List<CodeFormat> allFormats = codeFormatRepository.findAll();
+        System.out.println("📊 All CodeFormats in database: " + allFormats.size());
+        for (CodeFormat format : allFormats) {
+            System.out.println("   - " + format.getCodeType() + ": '" + format.getPrefix() + "' (active: " + format.getIsActive() + ", current: " + format.getCurrentNumber() + ")");
+        }
+        
+        Optional<CodeFormat> codeFormatOpt = codeFormatRepository.findByCodeTypeAndIsActiveTrue(codeType);
+        
+        if (!codeFormatOpt.isPresent()) {
+            // Fallback to default format if no configuration found
+            System.out.println("⚠️ No CodeFormat found for " + codeType + ", using default format");
+            return generateDefaultId(codeType);
+        }
+        
+        CodeFormat codeFormat = codeFormatOpt.get();
+        System.out.println("📋 Found CodeFormat: '" + codeFormat.getPrefix() + "' (length: " + codeFormat.getPrefix().length() + "), current number: " + codeFormat.getCurrentNumber());
+        
+        String generatedId;
+        
+        do {
+            // Increment the current number
+            int nextNumber = codeFormat.getCurrentNumber() + 1;
+            
+            // Generate ID using the exact prefix from database (no modifications)
+            generatedId = codeFormat.getPrefix() + "-" + String.format("%05d", nextNumber);
+            System.out.println("🔄 Generated ID: '" + generatedId + "' (next number: " + nextNumber + ")");
+            System.out.println("🔄 Using prefix from database: '" + codeFormat.getPrefix() + "' (exact match check)");
+            
+            // Update the current number in database
+            codeFormat.setCurrentNumber(nextNumber);
+            codeFormatRepository.save(codeFormat);
+            System.out.println("💾 Updated CodeFormat current number to: " + nextNumber);
+            
+        } while (!isIdUnique(generatedId));
+        
+        System.out.println("✅ Generated " + codeType + " ID: '" + generatedId + "' using CodeFormat");
+        return generatedId;
+    }
+    
+    /**
+     * Fallback method for generating IDs when no CodeFormat is configured
+     */
+    private String generateDefaultId(CodeFormat.CodeType codeType) {
+        System.out.println("🔄 Using DEFAULT ID generation for " + codeType);
+        String prefix = codeType == CodeFormat.CodeType.FARMER ? "FAM" : "EMP";
+        String stateCode = "XX";
+        String districtCode = "XX";
+        String generatedId = generateId(prefix, stateCode, districtCode);
+        System.out.println("✅ Generated DEFAULT ID: " + generatedId);
         return generatedId;
     }
     

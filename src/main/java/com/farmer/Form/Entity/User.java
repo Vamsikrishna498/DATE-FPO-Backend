@@ -57,6 +57,7 @@ public class User {
 
     private boolean forcePasswordChange;
     
+    
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

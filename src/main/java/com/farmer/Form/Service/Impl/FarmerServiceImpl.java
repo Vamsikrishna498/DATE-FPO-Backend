@@ -66,6 +66,17 @@ public class FarmerServiceImpl implements FarmerService {
 
             Farmer farmer = FarmerMapper.toEntity(dto, photoFile, passbookFile, aadhaarFile, soilTestFile);
             Farmer saved = farmerRepository.save(farmer);
+            
+            // Generate ID card for newly created farmers
+            try {
+                System.out.println("🔄 Generating ID card for newly created farmer: " + saved.getId());
+                idCardService.generateFarmerIdCard(saved);
+                System.out.println("✅ ID card generated successfully for farmer: " + saved.getId());
+            } catch (Exception e) {
+                System.err.println("❌ Failed to generate ID card for farmer " + saved.getId() + ": " + e.getMessage());
+                // Don't throw exception - farmer creation should still succeed even if ID card generation fails
+            }
+            
             return FarmerMapper.toDto(saved);
 
         } catch (IOException e) {
@@ -85,7 +96,7 @@ public class FarmerServiceImpl implements FarmerService {
             existing.setPhotoFileName(photoFile);
             Farmer saved = farmerRepository.save(existing);
             try {
-                List<com.farmer.Form.Entity.IdCard> cards = idCardService.getByHolderId(String.valueOf(saved.getId()));
+                List<com.farmer.Form.Entity.IdCard> cards = idCardRepository.findByHolderId(String.valueOf(saved.getId()));
                 com.farmer.Form.Entity.IdCard latestActive = cards.stream()
                         .filter(c -> c.getStatus() == com.farmer.Form.Entity.IdCard.CardStatus.ACTIVE)
                         .findFirst().orElse(cards.isEmpty() ? null : cards.get(0));
@@ -188,7 +199,19 @@ public class FarmerServiceImpl implements FarmerService {
 
     @Override
     public Farmer createFarmerBySuperAdmin(Farmer farmer) {
-        return farmerRepository.save(farmer);
+        Farmer savedFarmer = farmerRepository.save(farmer);
+        
+        // Generate ID card immediately for Super Admin created farmers
+        try {
+            System.out.println("🔄 Generating ID card for Super Admin created farmer: " + savedFarmer.getId());
+            idCardService.generateFarmerIdCard(savedFarmer);
+            System.out.println("✅ ID card generated successfully for farmer: " + savedFarmer.getId());
+        } catch (Exception e) {
+            System.err.println("❌ Failed to generate ID card for farmer " + savedFarmer.getId() + ": " + e.getMessage());
+            // Don't throw exception - farmer creation should still succeed even if ID card generation fails
+        }
+        
+        return savedFarmer;
     }
 
     @Override

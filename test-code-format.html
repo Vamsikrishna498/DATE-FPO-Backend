@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Code Format API</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Code Format API</h1>
+    <p>Ensure you have a valid JWT token in localStorage (key: 'token') and the backend is running.</p>
+
+    <div class="form-group">
+        <label>Code Type:</label>
+        <select id="codeType">
+            <option value="FARMER">Farmer Code</option>
+            <option value="EMPLOYEE">Employee Code</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Prefix:</label>
+        <input type="text" id="prefix" value="DATE-FAR" placeholder="e.g., DATE-FAR, DATE-EMP">
+    </div>
+
+    <div class="form-group">
+        <label>Starting Number:</label>
+        <input type="number" id="startingNumber" value="1" min="1">
+    </div>
+
+    <div class="form-group">
+        <label>Description:</label>
+        <textarea id="description" placeholder="Describe the purpose of this code format...">Farmer identification code format</textarea>
+    </div>
+
+    <button onclick="createCodeFormat()">Create Code Format</button>
+    <button onclick="getAllCodeFormats()">Get All Code Formats</button>
+    <button onclick="testGenerateCode()">Test Generate Code</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function createCodeFormat() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const formatData = {
+                codeType: document.getElementById('codeType').value,
+                prefix: document.getElementById('prefix').value,
+                startingNumber: parseInt(document.getElementById('startingNumber').value),
+                description: document.getElementById('description').value
+            };
+
+            console.log('Creating code format with data:', formatData);
+
+            try {
+                const response = await fetch('http://localhost:8080/api/config/code-formats', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formatData)
+                });
+
+                const result = await response.json();
+                console.log('API Response:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = `<p class="success">Success: Code format created with ID ${result.id}</p>`;
+                } else {
+                    document.getElementById('result').innerHTML = `<p class="error">Error: ${result.message || result.error || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = `<p class="error">Fetch Error: ${error.message}</p>`;
+            }
+        }
+
+        async function getAllCodeFormats() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/config/code-formats', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                console.log('Code formats:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = `<p class="success">Found ${result.length} code formats:</p><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                } else {
+                    document.getElementById('result').innerHTML = `<p class="error">Error: ${result.message || result.error || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = `<p class="error">Fetch Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testGenerateCode() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const codeType = document.getElementById('codeType').value;
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/config/code-formats/generate/${codeType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                console.log('Generated code:', result);
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = `<p class="success">Generated code: ${result.nextCode}</p>`;
+                } else {
+                    document.getElementById('result').innerHTML = `<p class="error">Error: ${result.message || result.error || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('result').innerHTML = `<p class="error">Fetch Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

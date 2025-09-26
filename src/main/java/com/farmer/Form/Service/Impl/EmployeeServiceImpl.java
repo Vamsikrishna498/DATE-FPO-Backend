@@ -36,7 +36,15 @@ public class EmployeeServiceImpl implements EmployeeService {
     public Employee saveEmployee(Employee updated) {
         // If ID is null, treat as a new employee
         if (updated.getId() == null) {
-            return repository.save(updated);
+            Employee savedNew = repository.save(updated);
+            // Generate Employee ID card immediately for newly created employees
+            try {
+                idCardService.generateEmployeeIdCard(savedNew);
+            } catch (Exception e) {
+                // Do not fail employee creation if ID card generation fails
+                System.err.println("Failed to generate employee ID card: " + e.getMessage());
+            }
+            return savedNew;
         }
  
         // Fetch existing employee for update
@@ -134,7 +142,15 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public Employee createEmployeeBySuperAdmin(Employee employee) {
-        return repository.save(employee);
+        Employee saved = repository.save(employee);
+        // Generate Employee ID card using configured EMPLOYEE code format
+        try {
+            idCardService.generateEmployeeIdCard(saved);
+        } catch (Exception e) {
+            // Log and continue; do not break the flow
+            System.err.println("Failed to generate employee ID card (super admin): " + e.getMessage());
+        }
+        return saved;
     }
 
     @Override

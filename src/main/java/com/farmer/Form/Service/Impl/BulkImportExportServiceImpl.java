@@ -8,6 +8,7 @@ import com.farmer.Form.Repository.EmployeeRepository;
 import com.farmer.Form.Service.BulkImportExportService;
 import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.EmployeeService;
+import com.farmer.Form.Service.IdCardService;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
     private final EmployeeRepository employeeRepository;
     private final FarmerService farmerService;
     private final EmployeeService employeeService;
+    private final IdCardService idCardService;
     
     private final Map<String, BulkImportResponseDTO> importStatusMap = new ConcurrentHashMap<>();
     
@@ -92,7 +94,18 @@ public class BulkImportExportServiceImpl implements BulkImportExportService {
                         try {
                             String[] row = data.get(i);
                             Farmer farmer = createFarmerFromRow(row, request);
-                            farmerRepository.save(farmer);
+                            Farmer savedFarmer = farmerRepository.save(farmer);
+                            
+                            // Generate ID card for bulk imported farmers
+                            try {
+                                System.out.println("🔄 Generating ID card for bulk imported farmer: " + savedFarmer.getId());
+                                idCardService.generateFarmerIdCard(savedFarmer);
+                                System.out.println("✅ ID card generated successfully for bulk imported farmer: " + savedFarmer.getId());
+                            } catch (Exception idError) {
+                                System.err.println("❌ Failed to generate ID card for bulk imported farmer " + savedFarmer.getId() + ": " + idError.getMessage());
+                                // Continue with import even if ID card generation fails
+                            }
+                            
                             successfulImports++;
                         } catch (Exception e) {
                             log.error("Error importing farmer at row {}: {}", i + 1, e.getMessage());

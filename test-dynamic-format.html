@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dynamic Format System</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Test Dynamic Format System</h1>
+    <p>This tests that the system automatically uses any prefix you configure without code changes.</p>
+
+    <div class="test-section">
+        <h3>Step 1: Check Current Configuration</h3>
+        <button onclick="checkCurrentConfig()">Check Current Config</button>
+        <div id="currentConfig"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 2: Test Different Prefixes</h3>
+        <p>Try these different prefixes to see if the system adapts automatically:</p>
+        <button onclick="testPrefix('MY_FARMER')">Test MY_FARMER</button>
+        <button onclick="testPrefix('AGRI_001')">Test AGRI_001</button>
+        <button onclick="testPrefix('FARM_2024')">Test FARM_2024</button>
+        <button onclick="testPrefix('CUSTOM')">Test CUSTOM</button>
+        <div id="prefixTest"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 3: Test Number Generation</h3>
+        <button onclick="testNumberGeneration()">Generate 5 Test Codes</button>
+        <div id="numberTest"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 4: Create Test Farmer</h3>
+        <button onclick="createTestFarmer()">Create Farmer with Current Format</button>
+        <div id="farmerTest"></div>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        let currentPrefix = '';
+
+        async function checkCurrentConfig() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('currentConfig').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/config/code-formats', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const formats = await response.json();
+                console.log('Current formats:', formats);
+
+                if (response.ok) {
+                    let html = '<h4>Current Configuration:</h4>';
+                    formats.forEach(format => {
+                        if (format.codeType === 'FARMER') {
+                            currentPrefix = format.prefix;
+                            html += '<div style="border: 1px solid #ccc; margin: 10px 0; padding: 10px; background-color: #e8f5e8;">';
+                            html += '<strong>Farmer Format:</strong><br>';
+                            html += '<strong>Prefix:</strong> "' + format.prefix + '"<br>';
+                            html += '<strong>Starting Number:</strong> ' + format.startingNumber + '<br>';
+                            html += '<strong>Current Number:</strong> ' + format.currentNumber + '<br>';
+                            html += '<strong>Next ID will be:</strong> ' + format.prefix + '-' + String(format.currentNumber + 1).padStart(5, '0') + '<br>';
+                            html += '</div>';
+                        }
+                    });
+                    document.getElementById('currentConfig').innerHTML = html;
+                } else {
+                    document.getElementById('currentConfig').innerHTML = '<p class="error">Error: ' + (formats.message || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('currentConfig').innerHTML = '<p class="error">Fetch Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testPrefix(newPrefix) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('prefixTest').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                // First, get the current farmer format
+                const getResponse = await fetch('http://localhost:8080/api/config/code-formats', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const formats = await getResponse.json();
+                const farmerFormat = formats.find(f => f.codeType === 'FARMER' && f.isActive);
+
+                if (!farmerFormat) {
+                    document.getElementById('prefixTest').innerHTML = '<p class="error">No active farmer format found</p>';
+                    return;
+                }
+
+                // Update the prefix
+                const updateResponse = await fetch(`http://localhost:8080/api/config/code-formats/${farmerFormat.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        prefix: newPrefix,
+                        startingNumber: farmerFormat.startingNumber,
+                        description: farmerFormat.description,
+                        isActive: true
+                    })
+                });
+
+                if (updateResponse.ok) {
+                    document.getElementById('prefixTest').innerHTML = '<p class="success">✅ Prefix updated to: ' + newPrefix + '</p>';
+                    currentPrefix = newPrefix;
+                    // Refresh the config display
+                    await checkCurrentConfig();
+                } else {
+                    const error = await updateResponse.json();
+                    document.getElementById('prefixTest').innerHTML = '<p class="error">Error updating prefix: ' + (error.message || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Update error:', error);
+                document.getElementById('prefixTest').innerHTML = '<p class="error">Update Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testNumberGeneration() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('numberTest').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                let html = '<h4>Testing Number Generation:</h4>';
+                
+                for (let i = 0; i < 5; i++) {
+                    const response = await fetch('http://localhost:8080/api/config/code-formats/generate/FARMER', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        html += '<p class="success">Generated ' + (i + 1) + ': ' + result.nextCode + '</p>';
+                    } else {
+                        html += '<p class="error">Error ' + (i + 1) + ': ' + (result.message || 'Unknown error') + '</p>';
+                    }
+                }
+                
+                document.getElementById('numberTest').innerHTML = html;
+            } catch (error) {
+                console.error('Test error:', error);
+                document.getElementById('numberTest').innerHTML = '<p class="error">Test Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function createTestFarmer() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('farmerTest').innerHTML = '<p style="color: red;">No token found. Please login first.</p>';
+                return;
+            }
+
+            const testFarmer = {
+                salutation: "Mr",
+                firstName: "Dynamic",
+                lastName: "Test" + Date.now(),
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: "9876543210",
+                nationality: "Indian",
+                country: "India",
+                state: "Andhra Pradesh",
+                district: "Kadapa",
+                village: "Test Village",
+                pincode: "516001",
+                email: "dynamic" + Date.now() + "@example.com"
+            };
+
+            try {
+                const response = await fetch('http://localhost:8080/api/super-admin/farmers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(testFarmer)
+                });
+
+                const result = await response.json();
+                console.log('Created farmer:', result);
+
+                if (response.ok) {
+                    document.getElementById('farmerTest').innerHTML = '<p class="success">✅ Test farmer created with ID: ' + result.id + '</p>';
+                    document.getElementById('farmerTest').innerHTML += '<p class="info">Check the farmers list to see the generated ID card with current prefix.</p>';
+                    document.getElementById('farmerTest').innerHTML += '<p class="info">Current prefix should be: ' + currentPrefix + '</p>';
+                } else {
+                    document.getElementById('farmerTest').innerHTML = '<p class="error">Error creating farmer: ' + (result.message || 'Unknown error') + '</p>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('farmerTest').innerHTML = '<p class="error">Fetch Error: ' + error.message + '</p>';
+            }
+        }
+
+        // Auto-check config on load
+        window.onload = function() {
+            checkCurrentConfig();
+        };
+    </script>
+</body>
+</html>
