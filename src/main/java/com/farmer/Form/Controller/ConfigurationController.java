@@ -283,4 +283,122 @@ public class ConfigurationController {
         configurationService.deleteSystemPreference(id);
         return ResponseEntity.ok(Map.of("message", "System preference deleted successfully"));
     }
+    
+    // Global Area Settings Endpoints
+    @GetMapping("/global-area/age")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getAgeSettings() {
+        List<Map<String, Object>> ageSettings = configurationService.getAgeSettings();
+        return ResponseEntity.ok(ageSettings);
+    }
+    
+    @GetMapping("/global-area/education")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getEducationTypes() {
+        List<Map<String, Object>> educationTypes = configurationService.getEducationTypes();
+        return ResponseEntity.ok(educationTypes);
+    }
+    
+    @GetMapping("/global-area/education-categories")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getEducationCategories() {
+        List<Map<String, Object>> educationCategories = configurationService.getEducationCategories();
+        return ResponseEntity.ok(educationCategories);
+    }
+    
+    @PostMapping("/global-area")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> createGlobalAreaSetting(
+            @RequestBody Map<String, Object> settingData,
+            Authentication authentication) {
+        settingData.put("createdBy", authentication.getName());
+        Map<String, Object> createdSetting = configurationService.createGlobalAreaSetting(settingData);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdSetting);
+    }
+    
+    @PostMapping("/global-area/age")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<AgeSettingDTO> createAgeSetting(
+            @Valid @RequestBody AgeSettingCreationDTO creationDTO,
+            Authentication authentication) {
+        creationDTO.setCreatedBy(authentication.getName());
+        AgeSettingDTO createdAgeSetting = configurationService.createAgeSetting(creationDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdAgeSetting);
+    }
+    
+    @GetMapping("/validate-age")
+    public ResponseEntity<Map<String, Object>> validateAge(
+            @RequestParam Integer age,
+            @RequestParam String userType) {
+        boolean isValid = configurationService.validateAge(age, userType);
+        String message = configurationService.getAgeValidationMessage(age, userType);
+        
+        Map<String, Object> response = Map.of(
+            "isValid", isValid,
+            "message", message != null ? message : "Age is valid"
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    @PutMapping("/global-area/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> updateGlobalAreaSetting(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> settingData,
+            Authentication authentication) {
+        settingData.put("updatedBy", authentication.getName());
+        Map<String, Object> updatedSetting = configurationService.updateGlobalAreaSetting(id, settingData);
+        return ResponseEntity.ok(updatedSetting);
+    }
+    
+    @DeleteMapping("/global-area/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> deleteGlobalAreaSetting(@PathVariable Long id) {
+        configurationService.deleteGlobalAreaSetting(id);
+        return ResponseEntity.ok(Map.of("message", "Global area setting deleted successfully"));
+    }
+    
+    // Crop Settings Endpoints
+    @GetMapping("/crop/names")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getCropNames() {
+        List<Map<String, Object>> cropNames = configurationService.getCropNames();
+        return ResponseEntity.ok(cropNames);
+    }
+    
+    @GetMapping("/crop/types")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getCropTypes() {
+        List<Map<String, Object>> cropTypes = configurationService.getCropTypes();
+        return ResponseEntity.ok(cropTypes);
+    }
+    
+    @PostMapping("/crop")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> createCropSetting(
+            @RequestBody Map<String, Object> cropData,
+            Authentication authentication) {
+        cropData.put("createdBy", authentication.getName());
+        Map<String, Object> createdCrop = configurationService.createCropSetting(cropData);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdCrop);
+    }
+    
+    @PutMapping("/crop/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> updateCropSetting(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> cropData,
+            Authentication authentication) {
+        cropData.put("updatedBy", authentication.getName());
+        Map<String, Object> updatedCrop = configurationService.updateCropSetting(id, cropData);
+        return ResponseEntity.ok(updatedCrop);
+    }
+    
+    @DeleteMapping("/crop/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> deleteCropSetting(@PathVariable Long id) {
+        configurationService.deleteCropSetting(id);
+        return ResponseEntity.ok(Map.of("message", "Crop setting deleted successfully"));
+    }
 }

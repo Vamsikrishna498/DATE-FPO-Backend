@@ -11,8 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +25,7 @@ public class ConfigurationService {
     private final TemplateRepository templateRepository;
     private final SystemSettingRepository systemSettingRepository;
     private final SystemPreferenceRepository systemPreferenceRepository;
+    private final AgeSettingRepository ageSettingRepository;
     
     // UserRole Services
     public UserRoleDTO createUserRole(UserRoleCreationDTO creationDTO) {
@@ -385,5 +385,270 @@ public class ConfigurationService {
         SystemPreference preference = systemPreferenceRepository.findActiveByPreferenceKey(preferenceKey)
                 .orElseThrow(() -> new ResourceNotFoundException("System preference not found with key: " + preferenceKey));
         return SystemPreferenceDTO.fromEntity(preference);
+    }
+    
+    // Global Area Settings Services
+    public List<Map<String, Object>> getAgeSettings() {
+        try {
+            List<AgeSetting> ageSettings = ageSettingRepository.findByIsActiveTrue();
+            return ageSettings.stream()
+                    .map(this::convertToMap)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching age settings from database", e);
+            return new ArrayList<>();
+        }
+    }
+    
+    private Map<String, Object> convertToMap(AgeSetting ageSetting) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", ageSetting.getId());
+        map.put("name", ageSetting.getName());
+        map.put("minValue", ageSetting.getMinValue());
+        map.put("maxValue", ageSetting.getMaxValue());
+        map.put("description", ageSetting.getDescription());
+        map.put("userType", ageSetting.getUserType());
+        map.put("isActive", ageSetting.getIsActive());
+        map.put("createdBy", ageSetting.getCreatedBy());
+        map.put("createdAt", ageSetting.getCreatedAt());
+        map.put("updatedBy", ageSetting.getUpdatedBy());
+        map.put("updatedAt", ageSetting.getUpdatedAt());
+        return map;
+    }
+    
+    // Age Validation Methods
+    public boolean validateAge(Integer age, String userType) {
+        try {
+            Optional<AgeSetting> ageSetting = ageSettingRepository.findActiveAgeSettingByUserType(userType);
+            if (ageSetting.isPresent()) {
+                AgeSetting setting = ageSetting.get();
+                return age >= setting.getMinValue() && age <= setting.getMaxValue();
+            }
+            return true; // If no age setting found, allow any age
+        } catch (Exception e) {
+            log.error("Error validating age for user type: {}", userType, e);
+            return true; // Default to allowing if validation fails
+        }
+    }
+    
+    public String getAgeValidationMessage(Integer age, String userType) {
+        try {
+            Optional<AgeSetting> ageSetting = ageSettingRepository.findActiveAgeSettingByUserType(userType);
+            if (ageSetting.isPresent()) {
+                AgeSetting setting = ageSetting.get();
+                if (age < setting.getMinValue()) {
+                    return String.format("Age must be at least %d years for %s registration", 
+                            setting.getMinValue(), userType.toLowerCase());
+                } else if (age > setting.getMaxValue()) {
+                    return String.format("Age must not exceed %d years for %s registration", 
+                            setting.getMaxValue(), userType.toLowerCase());
+                }
+            }
+            return null; // No validation error
+        } catch (Exception e) {
+            log.error("Error getting age validation message for user type: {}", userType, e);
+            return null;
+        }
+    }
+    
+    public AgeSettingDTO createAgeSetting(AgeSettingCreationDTO creationDTO) {
+        // Validate min and max values
+        if (creationDTO.getMinValue() >= creationDTO.getMaxValue()) {
+            throw new IllegalArgumentException("Minimum value must be less than maximum value");
+        }
+        
+        // Check if user type already has an active age setting
+        if (ageSettingRepository.existsByUserTypeAndIsActiveTrue(creationDTO.getUserType())) {
+            throw new IllegalArgumentException("Age setting for user type " + creationDTO.getUserType() + " already exists");
+        }
+        
+        AgeSetting ageSetting = AgeSetting.builder()
+                .name(creationDTO.getName())
+                .minValue(creationDTO.getMinValue())
+                .maxValue(creationDTO.getMaxValue())
+                .description(creationDTO.getDescription())
+                .userType(creationDTO.getUserType())
+                .isActive(creationDTO.getIsActive())
+                .createdBy(creationDTO.getCreatedBy())
+                .build();
+        
+        AgeSetting savedAgeSetting = ageSettingRepository.save(ageSetting);
+        
+        return AgeSettingDTO.builder()
+                .id(savedAgeSetting.getId())
+                .name(savedAgeSetting.getName())
+                .minValue(savedAgeSetting.getMinValue())
+                .maxValue(savedAgeSetting.getMaxValue())
+                .description(savedAgeSetting.getDescription())
+                .userType(savedAgeSetting.getUserType())
+                .isActive(savedAgeSetting.getIsActive())
+                .createdBy(savedAgeSetting.getCreatedBy())
+                .createdAt(savedAgeSetting.getCreatedAt())
+                .updatedBy(savedAgeSetting.getUpdatedBy())
+                .updatedAt(savedAgeSetting.getUpdatedAt())
+                .build();
+    }
+    
+    public List<Map<String, Object>> getEducationTypes() {
+        // For now, return sample data
+        // This can be implemented with a proper EducationType entity
+        List<Map<String, Object>> educationTypes = new ArrayList<>();
+        
+        Map<String, Object> education1 = new HashMap<>();
+        education1.put("id", 1L);
+        education1.put("name", "Primary Education");
+        education1.put("description", "Basic primary education");
+        education1.put("isActive", true);
+        educationTypes.add(education1);
+        
+        Map<String, Object> education2 = new HashMap<>();
+        education2.put("id", 2L);
+        education2.put("name", "Secondary Education");
+        education2.put("description", "Secondary school education");
+        education2.put("isActive", true);
+        educationTypes.add(education2);
+        
+        return educationTypes;
+    }
+    
+    public List<Map<String, Object>> getEducationCategories() {
+        // For now, return sample data
+        // This can be implemented with a proper EducationCategory entity
+        List<Map<String, Object>> educationCategories = new ArrayList<>();
+        
+        Map<String, Object> category1 = new HashMap<>();
+        category1.put("id", 1L);
+        category1.put("name", "Government School");
+        category1.put("description", "Government run educational institution");
+        category1.put("parentId", 1L);
+        category1.put("isActive", true);
+        educationCategories.add(category1);
+        
+        Map<String, Object> category2 = new HashMap<>();
+        category2.put("id", 2L);
+        category2.put("name", "Private School");
+        category2.put("description", "Private educational institution");
+        category2.put("parentId", 1L);
+        category2.put("isActive", true);
+        educationCategories.add(category2);
+        
+        return educationCategories;
+    }
+    
+    public Map<String, Object> createGlobalAreaSetting(Map<String, Object> settingData) {
+        // This is a placeholder implementation
+        // In a real scenario, you would implement specific logic based on the setting type
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", System.currentTimeMillis());
+        result.put("type", settingData.get("type"));
+        result.put("name", settingData.get("name"));
+        result.put("description", settingData.get("description"));
+        result.put("isActive", settingData.get("isActive"));
+        result.put("createdBy", settingData.get("createdBy"));
+        result.put("createdAt", new java.util.Date());
+        result.put("message", "Global area setting created successfully");
+        
+        return result;
+    }
+    
+    public Map<String, Object> updateGlobalAreaSetting(Long id, Map<String, Object> settingData) {
+        // This is a placeholder implementation
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", id);
+        result.put("type", settingData.get("type"));
+        result.put("name", settingData.get("name"));
+        result.put("description", settingData.get("description"));
+        result.put("isActive", settingData.get("isActive"));
+        result.put("updatedBy", settingData.get("updatedBy"));
+        result.put("updatedAt", new java.util.Date());
+        result.put("message", "Global area setting updated successfully");
+        
+        return result;
+    }
+    
+    public void deleteGlobalAreaSetting(Long id) {
+        // This is a placeholder implementation
+        log.info("Deleting global area setting with id: {}", id);
+    }
+    
+    public List<Map<String, Object>> getCropNames() {
+        // For now, return sample data
+        // This can be implemented with a proper CropName entity
+        List<Map<String, Object>> cropNames = new ArrayList<>();
+        
+        Map<String, Object> crop1 = new HashMap<>();
+        crop1.put("id", 1L);
+        crop1.put("name", "Rice");
+        crop1.put("description", "Paddy crop");
+        crop1.put("isActive", true);
+        cropNames.add(crop1);
+        
+        Map<String, Object> crop2 = new HashMap<>();
+        crop2.put("id", 2L);
+        crop2.put("name", "Wheat");
+        crop2.put("description", "Wheat crop");
+        crop2.put("isActive", true);
+        cropNames.add(crop2);
+        
+        return cropNames;
+    }
+    
+    public List<Map<String, Object>> getCropTypes() {
+        // For now, return sample data
+        // This can be implemented with a proper CropType entity
+        List<Map<String, Object>> cropTypes = new ArrayList<>();
+        
+        Map<String, Object> type1 = new HashMap<>();
+        type1.put("id", 1L);
+        type1.put("name", "Basmati Rice");
+        type1.put("description", "Premium quality rice variety");
+        type1.put("parentId", 1L);
+        type1.put("isActive", true);
+        cropTypes.add(type1);
+        
+        Map<String, Object> type2 = new HashMap<>();
+        type2.put("id", 2L);
+        type2.put("name", "Jasmine Rice");
+        type2.put("description", "Aromatic rice variety");
+        type2.put("parentId", 1L);
+        type2.put("isActive", true);
+        cropTypes.add(type2);
+        
+        return cropTypes;
+    }
+    
+    public Map<String, Object> createCropSetting(Map<String, Object> settingData) {
+        // This is a placeholder implementation
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", System.currentTimeMillis());
+        result.put("type", settingData.get("type"));
+        result.put("name", settingData.get("name"));
+        result.put("description", settingData.get("description"));
+        result.put("isActive", settingData.get("isActive"));
+        result.put("createdBy", settingData.get("createdBy"));
+        result.put("createdAt", new java.util.Date());
+        result.put("message", "Crop setting created successfully");
+        
+        return result;
+    }
+    
+    public Map<String, Object> updateCropSetting(Long id, Map<String, Object> settingData) {
+        // This is a placeholder implementation
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", id);
+        result.put("type", settingData.get("type"));
+        result.put("name", settingData.get("name"));
+        result.put("description", settingData.get("description"));
+        result.put("isActive", settingData.get("isActive"));
+        result.put("updatedBy", settingData.get("updatedBy"));
+        result.put("updatedAt", new java.util.Date());
+        result.put("message", "Crop setting updated successfully");
+        
+        return result;
+    }
+    
+    public void deleteCropSetting(Long id) {
+        // This is a placeholder implementation
+        log.info("Deleting crop setting with id: {}", id);
     }
 }

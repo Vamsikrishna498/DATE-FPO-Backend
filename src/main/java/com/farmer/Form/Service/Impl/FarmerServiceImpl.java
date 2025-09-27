@@ -11,6 +11,7 @@ import com.farmer.Form.Repository.EmployeeRepository;
 import com.farmer.Form.Service.FarmerService;
 import com.farmer.Form.Service.FileStorageService;
 import com.farmer.Form.Service.IdCardService;
+import com.farmer.Form.Service.EmailService;
 import com.farmer.Form.Repository.IdCardRepository;
 import com.farmer.Form.Repository.FPOMemberRepository;
 import com.farmer.Form.Repository.FPOServiceRepository;
@@ -50,6 +51,9 @@ public class FarmerServiceImpl implements FarmerService {
 
     @Autowired
     private FPOCropRepository fpoCropRepository;
+
+    @Autowired
+    private EmailService emailService;
 
     @Override
     public FarmerDTO createFarmer(FarmerDTO dto, MultipartFile photo, MultipartFile passbookPhoto,
@@ -288,6 +292,16 @@ public class FarmerServiceImpl implements FarmerService {
         Farmer verifyFarmer = farmerRepository.findById(farmerId).orElse(null);
         if (verifyFarmer != null && verifyFarmer.getAssignedEmployee() != null) {
             System.out.println("✅ Assignment verified: Farmer " + verifyFarmer.getId() + " assigned to " + verifyFarmer.getAssignedEmployee().getEmail());
+            try {
+                String empEmail = verifyFarmer.getAssignedEmployee().getEmail();
+                String empName = (verifyFarmer.getAssignedEmployee().getFirstName() != null ? verifyFarmer.getAssignedEmployee().getFirstName() : "") +
+                        (verifyFarmer.getAssignedEmployee().getLastName() != null ? (" " + verifyFarmer.getAssignedEmployee().getLastName()) : "");
+                String farmerName = (verifyFarmer.getFirstName() != null ? verifyFarmer.getFirstName() : "") +
+                        (verifyFarmer.getLastName() != null ? (" " + verifyFarmer.getLastName()) : "");
+                emailService.sendFarmerAssignedToEmployee(empEmail, empName.trim(), farmerName.trim(), verifyFarmer.getId());
+            } catch (Exception e) {
+                System.err.println("❌ Failed to send assignment email: " + e.getMessage());
+            }
         } else {
             System.err.println("❌ Assignment verification failed: Farmer " + farmerId + " has no assigned employee");
         }

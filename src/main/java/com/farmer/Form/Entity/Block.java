@@ -2,6 +2,7 @@ package com.farmer.Form.Entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,22 +13,27 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "countries", 
-       uniqueConstraints = @UniqueConstraint(columnNames = "name"))
+@Table(name = "blocks", 
+       uniqueConstraints = @UniqueConstraint(columnNames = {"name", "district_id"}))
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Country {
+public class Block {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @NotBlank(message = "Country name is required")
-    @Size(max = 100, message = "Country name must not exceed 100 characters")
-    @Column(name = "name", nullable = false, unique = true)
+    @NotBlank(message = "Block name is required")
+    @Size(max = 100, message = "Block name must not exceed 100 characters")
+    @Column(name = "name", nullable = false)
     private String name;
+    
+    @NotNull(message = "District is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "district_id", nullable = false)
+    private District district;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -35,8 +41,8 @@ public class Country {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
-    @OneToMany(mappedBy = "country", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<State> states;
+    @OneToMany(mappedBy = "block", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Village> villages;
     
     @PrePersist
     protected void onCreate() {

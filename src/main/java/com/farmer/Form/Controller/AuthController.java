@@ -594,4 +594,38 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    // ✅ Check email availability
+    @PostMapping("/check-email")
+    public ResponseEntity<Map<String, Object>> checkEmailAvailability(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        log.info("Checking email availability for: {}", email);
+        
+        if (email == null || email.trim().isEmpty()) {
+            log.warn("Email is null or empty");
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        }
+        
+        try {
+            boolean exists = userService.emailExists(email.trim());
+            log.info("Email {} exists: {}", email.trim(), exists);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("available", !exists);
+            response.put("email", email.trim());
+            if (exists) {
+                response.put("message", "Email is already registered");
+                log.info("Email {} is already registered", email.trim());
+            } else {
+                response.put("message", "Email is available");
+                log.info("Email {} is available", email.trim());
+            }
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error checking email availability for {}: {}", email, e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error checking email availability: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
 }

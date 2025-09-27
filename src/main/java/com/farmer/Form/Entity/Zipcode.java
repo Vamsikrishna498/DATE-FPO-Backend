@@ -2,41 +2,43 @@ package com.farmer.Form.Entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
-@Table(name = "countries", 
-       uniqueConstraints = @UniqueConstraint(columnNames = "name"))
+@Table(name = "zipcodes", 
+       uniqueConstraints = @UniqueConstraint(columnNames = {"code", "village_id"}))
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Country {
+public class Zipcode {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @NotBlank(message = "Country name is required")
-    @Size(max = 100, message = "Country name must not exceed 100 characters")
-    @Column(name = "name", nullable = false, unique = true)
-    private String name;
+    @NotBlank(message = "Zipcode is required")
+    @Pattern(regexp = "^[0-9]+$", message = "Zipcode must contain only numeric characters")
+    @Column(name = "code", nullable = false)
+    private String code;
+    
+    @NotNull(message = "Village is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "village_id", nullable = false)
+    private Village village;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    @OneToMany(mappedBy = "country", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<State> states;
     
     @PrePersist
     protected void onCreate() {

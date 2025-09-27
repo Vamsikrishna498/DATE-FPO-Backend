@@ -1,42 +1,54 @@
 package com.farmer.Form.Entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
-@Table(name = "countries", 
-       uniqueConstraints = @UniqueConstraint(columnNames = "name"))
+@Table(name = "age_settings")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Country {
+public class AgeSetting {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @NotBlank(message = "Country name is required")
-    @Size(max = 100, message = "Country name must not exceed 100 characters")
-    @Column(name = "name", nullable = false, unique = true)
+    @Column(name = "name", nullable = false)
     private String name;
+    
+    @Column(name = "min_value", nullable = false)
+    private Integer minValue;
+    
+    @Column(name = "max_value", nullable = false)
+    private Integer maxValue;
+    
+    @Column(name = "description")
+    private String description;
+    
+    @Column(name = "user_type", nullable = false)
+    private String userType; // FARMER, EMPLOYEE, ADMIN, etc.
+    
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+    
+    @Column(name = "created_by")
+    private String createdBy;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
+    @Column(name = "updated_by")
+    private String updatedBy;
+    
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    @OneToMany(mappedBy = "country", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<State> states;
     
     @PrePersist
     protected void onCreate() {

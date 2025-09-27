@@ -480,4 +480,16 @@ public class UserService {
             .body("Your new OTP has been sent to this email.")
             .build());
     }
+
+    // ✅ Check if email exists
+    public boolean emailExists(String email) {
+        log.info("Checking if email exists: {}", email);
+        if (email == null || email.trim().isEmpty()) {
+            log.info("Email is null or empty, returning false");
+            return false;
+        }
+        boolean exists = userRepository.findByEmail(email.trim()).isPresent();
+        log.info("Email {} exists: {}", email.trim(), exists);
+        return exists;
+    }
 }
