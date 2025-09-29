@@ -26,6 +26,10 @@ public class ConfigurationService {
     private final SystemSettingRepository systemSettingRepository;
     private final SystemPreferenceRepository systemPreferenceRepository;
     private final AgeSettingRepository ageSettingRepository;
+    private final EducationTypeRepository educationTypeRepository;
+    private final EducationCategoryRepository educationCategoryRepository;
+    private final CropNameRepository cropNameRepository;
+    private final CropTypeRepository cropTypeRepository;
     
     // UserRole Services
     public UserRoleDTO createUserRole(UserRoleCreationDTO creationDTO) {
@@ -419,29 +423,31 @@ public class ConfigurationService {
     // Age Validation Methods
     public boolean validateAge(Integer age, String userType) {
         try {
-            Optional<AgeSetting> ageSetting = ageSettingRepository.findActiveAgeSettingByUserType(userType);
-            if (ageSetting.isPresent()) {
-                AgeSetting setting = ageSetting.get();
+            // Since we now have global age settings, get the first active age setting
+            List<AgeSetting> ageSettings = ageSettingRepository.findByIsActiveTrue();
+            if (!ageSettings.isEmpty()) {
+                AgeSetting setting = ageSettings.get(0); // Get the first (and only) active age setting
                 return age >= setting.getMinValue() && age <= setting.getMaxValue();
             }
             return true; // If no age setting found, allow any age
         } catch (Exception e) {
-            log.error("Error validating age for user type: {}", userType, e);
+            log.error("Error validating age: {}", e.getMessage());
             return true; // Default to allowing if validation fails
         }
     }
     
     public String getAgeValidationMessage(Integer age, String userType) {
         try {
-            Optional<AgeSetting> ageSetting = ageSettingRepository.findActiveAgeSettingByUserType(userType);
-            if (ageSetting.isPresent()) {
-                AgeSetting setting = ageSetting.get();
+            // Since we now have global age settings, get the first active age setting
+            List<AgeSetting> ageSettings = ageSettingRepository.findByIsActiveTrue();
+            if (!ageSettings.isEmpty()) {
+                AgeSetting setting = ageSettings.get(0); // Get the first (and only) active age setting
                 if (age < setting.getMinValue()) {
-                    return String.format("Age must be at least %d years for %s registration", 
-                            setting.getMinValue(), userType.toLowerCase());
+                    return String.format("Age must be at least %d years for registration", 
+                            setting.getMinValue());
                 } else if (age > setting.getMaxValue()) {
-                    return String.format("Age must not exceed %d years for %s registration", 
-                            setting.getMaxValue(), userType.toLowerCase());
+                    return String.format("Age must not exceed %d years for registration", 
+                            setting.getMaxValue());
                 }
             }
             return null; // No validation error
@@ -457,9 +463,9 @@ public class ConfigurationService {
             throw new IllegalArgumentException("Minimum value must be less than maximum value");
         }
         
-        // Check if user type already has an active age setting
-        if (ageSettingRepository.existsByUserTypeAndIsActiveTrue(creationDTO.getUserType())) {
-            throw new IllegalArgumentException("Age setting for user type " + creationDTO.getUserType() + " already exists");
+        // Check if there's already an active age setting (only one global age setting allowed)
+        if (ageSettingRepository.existsByIsActiveTrue()) {
+            throw new IllegalArgumentException("An active age setting already exists. Only one global age setting is allowed.");
         }
         
         AgeSetting ageSetting = AgeSetting.builder()
@@ -467,7 +473,7 @@ public class ConfigurationService {
                 .minValue(creationDTO.getMinValue())
                 .maxValue(creationDTO.getMaxValue())
                 .description(creationDTO.getDescription())
-                .userType(creationDTO.getUserType())
+                .userType("GLOBAL") // Set as global age setting
                 .isActive(creationDTO.getIsActive())
                 .createdBy(creationDTO.getCreatedBy())
                 .build();
@@ -490,165 +496,452 @@ public class ConfigurationService {
     }
     
     public List<Map<String, Object>> getEducationTypes() {
-        // For now, return sample data
-        // This can be implemented with a proper EducationType entity
-        List<Map<String, Object>> educationTypes = new ArrayList<>();
-        
-        Map<String, Object> education1 = new HashMap<>();
-        education1.put("id", 1L);
-        education1.put("name", "Primary Education");
-        education1.put("description", "Basic primary education");
-        education1.put("isActive", true);
-        educationTypes.add(education1);
-        
-        Map<String, Object> education2 = new HashMap<>();
-        education2.put("id", 2L);
-        education2.put("name", "Secondary Education");
-        education2.put("description", "Secondary school education");
-        education2.put("isActive", true);
-        educationTypes.add(education2);
-        
-        return educationTypes;
+        try {
+            List<EducationType> educationTypes = educationTypeRepository.findByIsActiveTrue();
+            return educationTypes.stream()
+                    .map(this::convertEducationTypeToMap)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching education types from database", e);
+            return new ArrayList<>();
+        }
+    }
+    
+    private Map<String, Object> convertEducationTypeToMap(EducationType educationType) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", educationType.getId());
+        map.put("name", educationType.getName());
+        map.put("description", educationType.getDescription());
+        map.put("isActive", educationType.getIsActive());
+        map.put("createdBy", educationType.getCreatedBy());
+        map.put("createdAt", educationType.getCreatedAt());
+        map.put("updatedBy", educationType.getUpdatedBy());
+        map.put("updatedAt", educationType.getUpdatedAt());
+        return map;
     }
     
     public List<Map<String, Object>> getEducationCategories() {
-        // For now, return sample data
-        // This can be implemented with a proper EducationCategory entity
-        List<Map<String, Object>> educationCategories = new ArrayList<>();
-        
-        Map<String, Object> category1 = new HashMap<>();
-        category1.put("id", 1L);
-        category1.put("name", "Government School");
-        category1.put("description", "Government run educational institution");
-        category1.put("parentId", 1L);
-        category1.put("isActive", true);
-        educationCategories.add(category1);
-        
-        Map<String, Object> category2 = new HashMap<>();
-        category2.put("id", 2L);
-        category2.put("name", "Private School");
-        category2.put("description", "Private educational institution");
-        category2.put("parentId", 1L);
-        category2.put("isActive", true);
-        educationCategories.add(category2);
-        
-        return educationCategories;
+        try {
+            List<EducationCategory> educationCategories = educationCategoryRepository.findByIsActiveTrue();
+            return educationCategories.stream()
+                    .map(this::convertEducationCategoryToMap)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching education categories from database", e);
+            return new ArrayList<>();
+        }
+    }
+    
+    private Map<String, Object> convertEducationCategoryToMap(EducationCategory educationCategory) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", educationCategory.getId());
+        map.put("name", educationCategory.getName());
+        map.put("description", educationCategory.getDescription());
+        map.put("parentId", educationCategory.getParentId());
+        map.put("isActive", educationCategory.getIsActive());
+        map.put("createdBy", educationCategory.getCreatedBy());
+        map.put("createdAt", educationCategory.getCreatedAt());
+        map.put("updatedBy", educationCategory.getUpdatedBy());
+        map.put("updatedAt", educationCategory.getUpdatedAt());
+        return map;
     }
     
     public Map<String, Object> createGlobalAreaSetting(Map<String, Object> settingData) {
-        // This is a placeholder implementation
-        // In a real scenario, you would implement specific logic based on the setting type
+        String type = (String) settingData.get("type");
+        String name = (String) settingData.get("name");
+        String description = (String) settingData.get("description");
+        Boolean isActive = (Boolean) settingData.getOrDefault("isActive", true);
+        String createdBy = (String) settingData.get("createdBy");
+        
         Map<String, Object> result = new HashMap<>();
-        result.put("id", System.currentTimeMillis());
-        result.put("type", settingData.get("type"));
-        result.put("name", settingData.get("name"));
-        result.put("description", settingData.get("description"));
-        result.put("isActive", settingData.get("isActive"));
-        result.put("createdBy", settingData.get("createdBy"));
-        result.put("createdAt", new java.util.Date());
-        result.put("message", "Global area setting created successfully");
+        
+        try {
+            switch (type) {
+                case "EDUCATION_TYPE":
+                    if (educationTypeRepository.existsByNameAndIsActiveTrue(name)) {
+                        throw new IllegalArgumentException("Education type with name " + name + " already exists");
+                    }
+                    
+                    EducationType educationType = EducationType.builder()
+                            .name(name)
+                            .description(description)
+                            .isActive(isActive)
+                            .createdBy(createdBy)
+                            .build();
+                    
+                    EducationType savedEducationType = educationTypeRepository.save(educationType);
+                    result = convertEducationTypeToMap(savedEducationType);
+                    result.put("message", "Education type created successfully");
+                    break;
+                    
+                case "EDUCATION_CATEGORY":
+                    Long parentId = settingData.get("parentId") != null ? 
+                            Long.valueOf(settingData.get("parentId").toString()) : null;
+                    
+                    if (educationCategoryRepository.existsByNameAndIsActiveTrue(name)) {
+                        throw new IllegalArgumentException("Education category with name " + name + " already exists");
+                    }
+                    
+                    EducationCategory educationCategory = EducationCategory.builder()
+                            .name(name)
+                            .description(description)
+                            .parentId(parentId)
+                            .isActive(isActive)
+                            .createdBy(createdBy)
+                            .build();
+                    
+                    EducationCategory savedEducationCategory = educationCategoryRepository.save(educationCategory);
+                    result = convertEducationCategoryToMap(savedEducationCategory);
+                    result.put("message", "Education category created successfully");
+                    break;
+                    
+                default:
+                    throw new IllegalArgumentException("Unknown setting type: " + type);
+            }
+        } catch (Exception e) {
+            log.error("Error creating global area setting", e);
+            throw e;
+        }
         
         return result;
     }
     
     public Map<String, Object> updateGlobalAreaSetting(Long id, Map<String, Object> settingData) {
-        // This is a placeholder implementation
+        String type = (String) settingData.get("type");
+        String name = (String) settingData.get("name");
+        String description = (String) settingData.get("description");
+        Boolean isActive = (Boolean) settingData.get("isActive");
+        String updatedBy = (String) settingData.get("updatedBy");
+        
         Map<String, Object> result = new HashMap<>();
-        result.put("id", id);
-        result.put("type", settingData.get("type"));
-        result.put("name", settingData.get("name"));
-        result.put("description", settingData.get("description"));
-        result.put("isActive", settingData.get("isActive"));
-        result.put("updatedBy", settingData.get("updatedBy"));
-        result.put("updatedAt", new java.util.Date());
-        result.put("message", "Global area setting updated successfully");
+        
+        try {
+            switch (type) {
+                case "AGE_SETTING":
+                    AgeSetting ageSetting = ageSettingRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException("Age setting not found with id: " + id));
+                    
+                    if (!ageSetting.getName().equals(name) && 
+                        ageSettingRepository.existsByNameAndIsActiveTrueAndIdNot(name, id)) {
+                        throw new IllegalArgumentException("Age setting with name " + name + " already exists");
+                    }
+                    
+                    Integer minValue = settingData.get("minValue") != null ? 
+                            Integer.valueOf(settingData.get("minValue").toString()) : null;
+                    Integer maxValue = settingData.get("maxValue") != null ? 
+                            Integer.valueOf(settingData.get("maxValue").toString()) : null;
+                    ageSetting.setName(name);
+                    ageSetting.setMinValue(minValue);
+                    ageSetting.setMaxValue(maxValue);
+                    ageSetting.setDescription(description);
+                    ageSetting.setUserType("GLOBAL"); // Set as global age setting
+                    ageSetting.setIsActive(isActive);
+                    ageSetting.setUpdatedBy(updatedBy);
+                    
+                    AgeSetting updatedAgeSetting = ageSettingRepository.save(ageSetting);
+                    result = convertToMap(updatedAgeSetting);
+                    result.put("message", "Age setting updated successfully");
+                    break;
+                    
+                case "EDUCATION_TYPE":
+                    EducationType educationType = educationTypeRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException("Education type not found with id: " + id));
+                    
+                    if (!educationType.getName().equals(name) && 
+                        educationTypeRepository.existsByNameAndIsActiveTrueAndIdNot(name, id)) {
+                        throw new IllegalArgumentException("Education type with name " + name + " already exists");
+                    }
+                    
+                    educationType.setName(name);
+                    educationType.setDescription(description);
+                    educationType.setIsActive(isActive);
+                    educationType.setUpdatedBy(updatedBy);
+                    
+                    EducationType updatedEducationType = educationTypeRepository.save(educationType);
+                    result = convertEducationTypeToMap(updatedEducationType);
+                    result.put("message", "Education type updated successfully");
+                    break;
+                    
+                case "EDUCATION_CATEGORY":
+                    EducationCategory educationCategory = educationCategoryRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException("Education category not found with id: " + id));
+                    
+                    if (!educationCategory.getName().equals(name) && 
+                        educationCategoryRepository.existsByNameAndIsActiveTrueAndIdNot(name, id)) {
+                        throw new IllegalArgumentException("Education category with name " + name + " already exists");
+                    }
+                    
+                    Long parentId = settingData.get("parentId") != null ? 
+                            Long.valueOf(settingData.get("parentId").toString()) : null;
+                    
+                    educationCategory.setName(name);
+                    educationCategory.setDescription(description);
+                    educationCategory.setParentId(parentId);
+                    educationCategory.setIsActive(isActive);
+                    educationCategory.setUpdatedBy(updatedBy);
+                    
+                    EducationCategory updatedEducationCategory = educationCategoryRepository.save(educationCategory);
+                    result = convertEducationCategoryToMap(updatedEducationCategory);
+                    result.put("message", "Education category updated successfully");
+                    break;
+                    
+                default:
+                    throw new IllegalArgumentException("Unknown setting type: " + type);
+            }
+        } catch (Exception e) {
+            log.error("Error updating global area setting", e);
+            throw e;
+        }
         
         return result;
     }
     
     public void deleteGlobalAreaSetting(Long id) {
-        // This is a placeholder implementation
         log.info("Deleting global area setting with id: {}", id);
+        
+        try {
+            // Try to delete from AgeSetting first
+            Optional<AgeSetting> ageSetting = ageSettingRepository.findById(id);
+            if (ageSetting.isPresent()) {
+                ageSettingRepository.delete(ageSetting.get());
+                log.info("Deleted age setting: {}", ageSetting.get().getName());
+                return;
+            }
+            
+            // Try to delete from EducationType
+            Optional<EducationType> educationType = educationTypeRepository.findById(id);
+            if (educationType.isPresent()) {
+                educationTypeRepository.delete(educationType.get());
+                log.info("Deleted education type: {}", educationType.get().getName());
+                return;
+            }
+            
+            // Try to delete from EducationCategory
+            Optional<EducationCategory> educationCategory = educationCategoryRepository.findById(id);
+            if (educationCategory.isPresent()) {
+                educationCategoryRepository.delete(educationCategory.get());
+                log.info("Deleted education category: {}", educationCategory.get().getName());
+                return;
+            }
+            
+            // If not found in any table, throw exception
+            throw new ResourceNotFoundException("Global area setting not found with id: " + id);
+            
+        } catch (Exception e) {
+            log.error("Error deleting global area setting with id: {}", id, e);
+            throw e;
+        }
     }
     
     public List<Map<String, Object>> getCropNames() {
-        // For now, return sample data
-        // This can be implemented with a proper CropName entity
-        List<Map<String, Object>> cropNames = new ArrayList<>();
-        
-        Map<String, Object> crop1 = new HashMap<>();
-        crop1.put("id", 1L);
-        crop1.put("name", "Rice");
-        crop1.put("description", "Paddy crop");
-        crop1.put("isActive", true);
-        cropNames.add(crop1);
-        
-        Map<String, Object> crop2 = new HashMap<>();
-        crop2.put("id", 2L);
-        crop2.put("name", "Wheat");
-        crop2.put("description", "Wheat crop");
-        crop2.put("isActive", true);
-        cropNames.add(crop2);
-        
-        return cropNames;
+        try {
+            List<CropName> cropNames = cropNameRepository.findByIsActiveTrue();
+            return cropNames.stream()
+                    .map(this::convertCropNameToMap)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching crop names from database", e);
+            return new ArrayList<>();
+        }
+    }
+    
+    private Map<String, Object> convertCropNameToMap(CropName cropName) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", cropName.getId());
+        map.put("name", cropName.getName());
+        map.put("code", cropName.getCode());
+        map.put("description", cropName.getDescription());
+        map.put("isActive", cropName.getIsActive());
+        map.put("createdBy", cropName.getCreatedBy());
+        map.put("createdAt", cropName.getCreatedAt());
+        map.put("updatedBy", cropName.getUpdatedBy());
+        map.put("updatedAt", cropName.getUpdatedAt());
+        return map;
     }
     
     public List<Map<String, Object>> getCropTypes() {
-        // For now, return sample data
-        // This can be implemented with a proper CropType entity
-        List<Map<String, Object>> cropTypes = new ArrayList<>();
-        
-        Map<String, Object> type1 = new HashMap<>();
-        type1.put("id", 1L);
-        type1.put("name", "Basmati Rice");
-        type1.put("description", "Premium quality rice variety");
-        type1.put("parentId", 1L);
-        type1.put("isActive", true);
-        cropTypes.add(type1);
-        
-        Map<String, Object> type2 = new HashMap<>();
-        type2.put("id", 2L);
-        type2.put("name", "Jasmine Rice");
-        type2.put("description", "Aromatic rice variety");
-        type2.put("parentId", 1L);
-        type2.put("isActive", true);
-        cropTypes.add(type2);
-        
-        return cropTypes;
+        try {
+            List<CropType> cropTypes = cropTypeRepository.findByIsActiveTrue();
+            return cropTypes.stream()
+                    .map(this::convertCropTypeToMap)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching crop types from database", e);
+            return new ArrayList<>();
+        }
+    }
+    
+    private Map<String, Object> convertCropTypeToMap(CropType cropType) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", cropType.getId());
+        map.put("name", cropType.getName());
+        map.put("code", cropType.getCode());
+        map.put("description", cropType.getDescription());
+        map.put("parentId", cropType.getParentId());
+        map.put("isActive", cropType.getIsActive());
+        map.put("createdBy", cropType.getCreatedBy());
+        map.put("createdAt", cropType.getCreatedAt());
+        map.put("updatedBy", cropType.getUpdatedBy());
+        map.put("updatedAt", cropType.getUpdatedAt());
+        return map;
     }
     
     public Map<String, Object> createCropSetting(Map<String, Object> settingData) {
-        // This is a placeholder implementation
+        String type = (String) settingData.get("type");
+        String name = (String) settingData.get("name");
+        String code = (String) settingData.get("code");
+        String description = (String) settingData.get("description");
+        Boolean isActive = (Boolean) settingData.getOrDefault("isActive", true);
+        String createdBy = (String) settingData.get("createdBy");
+        
         Map<String, Object> result = new HashMap<>();
-        result.put("id", System.currentTimeMillis());
-        result.put("type", settingData.get("type"));
-        result.put("name", settingData.get("name"));
-        result.put("description", settingData.get("description"));
-        result.put("isActive", settingData.get("isActive"));
-        result.put("createdBy", settingData.get("createdBy"));
-        result.put("createdAt", new java.util.Date());
-        result.put("message", "Crop setting created successfully");
+        
+        try {
+            switch (type) {
+                case "CROP_NAME":
+                    if (cropNameRepository.existsByNameAndIsActiveTrue(name)) {
+                        throw new IllegalArgumentException("Crop name " + name + " already exists");
+                    }
+                    
+                    CropName cropName = CropName.builder()
+                            .name(name)
+                            .code(code)
+                            .description(description)
+                            .isActive(isActive)
+                            .createdBy(createdBy)
+                            .build();
+                    
+                    CropName savedCropName = cropNameRepository.save(cropName);
+                    result = convertCropNameToMap(savedCropName);
+                    result.put("message", "Crop name created successfully");
+                    break;
+                    
+                case "CROP_TYPE":
+                    Long parentId = settingData.get("parentId") != null ? 
+                            Long.valueOf(settingData.get("parentId").toString()) : null;
+                    
+                    if (cropTypeRepository.existsByNameAndIsActiveTrue(name)) {
+                        throw new IllegalArgumentException("Crop type " + name + " already exists");
+                    }
+                    
+                    CropType cropType = CropType.builder()
+                            .name(name)
+                            .code(code)
+                            .description(description)
+                            .parentId(parentId)
+                            .isActive(isActive)
+                            .createdBy(createdBy)
+                            .build();
+                    
+                    CropType savedCropType = cropTypeRepository.save(cropType);
+                    result = convertCropTypeToMap(savedCropType);
+                    result.put("message", "Crop type created successfully");
+                    break;
+                    
+                default:
+                    throw new IllegalArgumentException("Unknown crop setting type: " + type);
+            }
+        } catch (Exception e) {
+            log.error("Error creating crop setting", e);
+            throw e;
+        }
         
         return result;
     }
     
     public Map<String, Object> updateCropSetting(Long id, Map<String, Object> settingData) {
-        // This is a placeholder implementation
+        String type = (String) settingData.get("type");
+        String name = (String) settingData.get("name");
+        String code = (String) settingData.get("code");
+        String description = (String) settingData.get("description");
+        Boolean isActive = (Boolean) settingData.get("isActive");
+        String updatedBy = (String) settingData.get("updatedBy");
+        
         Map<String, Object> result = new HashMap<>();
-        result.put("id", id);
-        result.put("type", settingData.get("type"));
-        result.put("name", settingData.get("name"));
-        result.put("description", settingData.get("description"));
-        result.put("isActive", settingData.get("isActive"));
-        result.put("updatedBy", settingData.get("updatedBy"));
-        result.put("updatedAt", new java.util.Date());
-        result.put("message", "Crop setting updated successfully");
+        
+        try {
+            switch (type) {
+                case "CROP_NAME":
+                    CropName cropName = cropNameRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException("Crop name not found with id: " + id));
+                    
+                    if (!cropName.getName().equals(name) && 
+                        cropNameRepository.existsByNameAndIsActiveTrueAndIdNot(name, id)) {
+                        throw new IllegalArgumentException("Crop name " + name + " already exists");
+                    }
+                    
+                    cropName.setName(name);
+                    cropName.setCode(code);
+                    cropName.setDescription(description);
+                    cropName.setIsActive(isActive);
+                    cropName.setUpdatedBy(updatedBy);
+                    
+                    CropName updatedCropName = cropNameRepository.save(cropName);
+                    result = convertCropNameToMap(updatedCropName);
+                    result.put("message", "Crop name updated successfully");
+                    break;
+                    
+                case "CROP_TYPE":
+                    CropType cropType = cropTypeRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException("Crop type not found with id: " + id));
+                    
+                    if (!cropType.getName().equals(name) && 
+                        cropTypeRepository.existsByNameAndIsActiveTrueAndIdNot(name, id)) {
+                        throw new IllegalArgumentException("Crop type " + name + " already exists");
+                    }
+                    
+                    Long parentId = settingData.get("parentId") != null ? 
+                            Long.valueOf(settingData.get("parentId").toString()) : null;
+                    
+                    cropType.setName(name);
+                    cropType.setCode(code);
+                    cropType.setDescription(description);
+                    cropType.setParentId(parentId);
+                    cropType.setIsActive(isActive);
+                    cropType.setUpdatedBy(updatedBy);
+                    
+                    CropType updatedCropType = cropTypeRepository.save(cropType);
+                    result = convertCropTypeToMap(updatedCropType);
+                    result.put("message", "Crop type updated successfully");
+                    break;
+                    
+                default:
+                    throw new IllegalArgumentException("Unknown crop setting type: " + type);
+            }
+        } catch (Exception e) {
+            log.error("Error updating crop setting", e);
+            throw e;
+        }
         
         return result;
     }
     
     public void deleteCropSetting(Long id) {
-        // This is a placeholder implementation
         log.info("Deleting crop setting with id: {}", id);
+        
+        try {
+            // Try to delete from CropName first
+            Optional<CropName> cropName = cropNameRepository.findById(id);
+            if (cropName.isPresent()) {
+                cropNameRepository.delete(cropName.get());
+                log.info("Deleted crop name: {}", cropName.get().getName());
+                return;
+            }
+            
+            // Try to delete from CropType
+            Optional<CropType> cropType = cropTypeRepository.findById(id);
+            if (cropType.isPresent()) {
+                cropTypeRepository.delete(cropType.get());
+                log.info("Deleted crop type: {}", cropType.get().getName());
+                return;
+            }
+            
+            // If not found in either table, throw exception
+            throw new ResourceNotFoundException("Crop setting not found with id: " + id);
+            
+        } catch (Exception e) {
+            log.error("Error deleting crop setting with id: {}", id, e);
+            throw e;
+        }
     }
 }

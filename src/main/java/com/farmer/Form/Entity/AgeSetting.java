@@ -32,10 +32,12 @@ public class AgeSetting {
     @Column(name = "description")
     private String description;
     
-    @Column(name = "user_type", nullable = false)
-    private String userType; // FARMER, EMPLOYEE, ADMIN, etc.
+    @Column(name = "user_type", nullable = true)
+    @Builder.Default
+    private String userType = "GLOBAL"; // Default value for global age settings
     
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private Boolean isActive = true;
     
     @Column(name = "created_by")
