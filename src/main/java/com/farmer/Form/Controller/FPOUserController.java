@@ -9,6 +9,9 @@ import com.farmer.Form.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -40,9 +43,23 @@ public class FPOUserController {
             FPO fpo = fpoRepository.findById(fpoId)
                     .orElseThrow(() -> new ResourceNotFoundException("FPO not found with id: " + fpoId));
 
-            // Allow only FPO-scoped roles for creation from FPO Admin dashboard
+            // Determine requested role
             String roleUpper = req.role() == null ? "" : req.role().toUpperCase();
-            if (!("FPO".equals(roleUpper) || "EMPLOYEE".equals(roleUpper) || "FARMER".equals(roleUpper))) {
+
+            // Who is calling?
+            Authentication auth = SecurityContextHolder.getContext() != null
+                    ? SecurityContextHolder.getContext().getAuthentication()
+                    : null;
+            boolean callerIsAdminOrSuperAdmin = auth != null && auth.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch(a -> "ROLE_ADMIN".equals(a) || "ROLE_SUPER_ADMIN".equals(a));
+
+            // Allow ADMIN creation only for ADMIN or SUPER_ADMIN callers; otherwise restrict to FPO/EMPLOYEE/FARMER
+            boolean roleAllowed =
+                    "FPO".equals(roleUpper) || "EMPLOYEE".equals(roleUpper) || "FARMER".equals(roleUpper)
+                    || ("ADMIN".equals(roleUpper) && callerIsAdminOrSuperAdmin);
+
+            if (!roleAllowed) {
                 return ResponseEntity.status(403).body(java.util.Map.of(
                         "message", "Only FPO, EMPLOYEE or FARMER user types can be created from this screen"
                 ));

@@ -9,6 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
  
 import com.farmer.Form.DTO.EmployeeDTO;
+import com.farmer.Form.DTO.FPOCreationDTO;
+import com.farmer.Form.DTO.FPODTO;
 import com.farmer.Form.DTO.PincodeApiResponse.PostOffice;
 import com.farmer.Form.Entity.Employee;
 import com.farmer.Form.Entity.Farmer;
@@ -17,6 +19,15 @@ import com.farmer.Form.Service.AddressService;
 import com.farmer.Form.Service.EmployeeService;
 import com.farmer.Form.Service.FileStorageService;
 import com.farmer.Form.Service.FarmerService;
+import com.farmer.Form.Service.FPOService;
+import com.farmer.Form.Entity.FPO;
+import com.farmer.Form.Entity.FPOUser;
+import com.farmer.Form.Entity.Role;
+import com.farmer.Form.Entity.UserStatus;
+import com.farmer.Form.Repository.FPOUserRepository;
+import com.farmer.Form.Repository.FPORepository;
+import com.farmer.Form.exception.ResourceNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
  
 import java.io.IOException;
 import java.time.LocalDate;
@@ -36,6 +47,10 @@ public class EmployeeController {
     private final FileStorageService fileStorageService;
     private final FarmerService farmerService;
     private final com.farmer.Form.Service.IdCardService idCardService;
+    private final FPOService fpoService;
+    private final FPOUserRepository fpoUserRepository;
+    private final FPORepository fpoRepository;
+    private final PasswordEncoder passwordEncoder;
  
     // ✅ Create employee with file upload
     @PostMapping
@@ -958,6 +973,148 @@ public class EmployeeController {
             return ResponseEntity.ok(farmersList);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(List.of());
+        }
+    }
+
+    // ✅ Employee-specific FPO update endpoint
+    @PutMapping("/fpo/{id}")
+    public ResponseEntity<?> updateFPO(@PathVariable Long id, @RequestBody Map<String, Object> fpoData, Authentication authentication) {
+        try {
+            String employeeEmail = authentication.getName();
+            Employee employee = employeeService.getEmployeeByEmail(employeeEmail);
+            if (employee == null) {
+                return ResponseEntity.status(404).body(Map.of("message", "Employee not found"));
+            }
+
+            // Get the FPO to update
+            FPODTO existingFPO = fpoService.getFPOById(id);
+            if (existingFPO == null) {
+                return ResponseEntity.status(404).body(Map.of("message", "FPO not found"));
+            }
+
+            // Create FPOCreationDTO with updated data
+            FPOCreationDTO updateDTO = new FPOCreationDTO();
+            
+            // Set existing values first
+            updateDTO.setFpoName(existingFPO.getFpoName());
+            updateDTO.setRegistrationNumber(existingFPO.getRegistrationNumber());
+            updateDTO.setCeoName(existingFPO.getCeoName());
+            updateDTO.setPhoneNumber(existingFPO.getPhoneNumber());
+            updateDTO.setEmail(existingFPO.getEmail());
+            updateDTO.setState(existingFPO.getState());
+            updateDTO.setDistrict(existingFPO.getDistrict());
+            updateDTO.setVillage(existingFPO.getVillage());
+            updateDTO.setPincode(existingFPO.getPincode());
+            updateDTO.setJoinDate(existingFPO.getJoinDate());
+            updateDTO.setRegistrationType(existingFPO.getRegistrationType());
+            updateDTO.setNumberOfMembers(existingFPO.getNumberOfMembers());
+            updateDTO.setPanNumber(existingFPO.getPanNumber());
+            updateDTO.setGstNumber(existingFPO.getGstNumber());
+            updateDTO.setBankName(existingFPO.getBankName());
+            updateDTO.setAccountNumber(existingFPO.getAccountNumber());
+            updateDTO.setIfscCode(existingFPO.getIfscCode());
+            updateDTO.setBranchName(existingFPO.getBranchName());
+
+            // Update with provided data
+            if (fpoData.containsKey("fpoName")) {
+                updateDTO.setFpoName((String) fpoData.get("fpoName"));
+            }
+            if (fpoData.containsKey("registrationNumber")) {
+                updateDTO.setRegistrationNumber((String) fpoData.get("registrationNumber"));
+            }
+            if (fpoData.containsKey("ceoName")) {
+                updateDTO.setCeoName((String) fpoData.get("ceoName"));
+            }
+            if (fpoData.containsKey("phoneNumber")) {
+                updateDTO.setPhoneNumber((String) fpoData.get("phoneNumber"));
+            }
+            if (fpoData.containsKey("email")) {
+                updateDTO.setEmail((String) fpoData.get("email"));
+            }
+            if (fpoData.containsKey("state")) {
+                updateDTO.setState((String) fpoData.get("state"));
+            }
+            if (fpoData.containsKey("district")) {
+                updateDTO.setDistrict((String) fpoData.get("district"));
+            }
+            if (fpoData.containsKey("village")) {
+                updateDTO.setVillage((String) fpoData.get("village"));
+            }
+            if (fpoData.containsKey("pincode")) {
+                updateDTO.setPincode((String) fpoData.get("pincode"));
+            }
+
+            // Save the updated FPO using the service method
+            FPODTO updatedFPO = fpoService.updateFPO(id, updateDTO);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "FPO updated successfully");
+            response.put("fpo", updatedFPO);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "Error updating FPO: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    // ✅ Employee-specific FPO user creation endpoint
+    @PostMapping("/fpo/{fpoId}/users")
+    public ResponseEntity<?> createFPOUser(@PathVariable Long fpoId, @RequestBody Map<String, Object> userData, Authentication authentication) {
+        try {
+            String employeeEmail = authentication.getName();
+            Employee employee = employeeService.getEmployeeByEmail(employeeEmail);
+            if (employee == null) {
+                return ResponseEntity.status(404).body(Map.of("message", "Employee not found"));
+            }
+
+            // Get the FPO entity to verify it exists
+            FPO fpo = fpoRepository.findById(fpoId)
+                .orElseThrow(() -> new ResourceNotFoundException("FPO not found with id: " + fpoId));
+
+            // Validate required fields
+            if (!userData.containsKey("email") || !userData.containsKey("phoneNumber") || 
+                !userData.containsKey("firstName") || !userData.containsKey("lastName") || 
+                !userData.containsKey("role") || !userData.containsKey("password")) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Missing required fields"));
+            }
+
+            // Allow only FPO-scoped roles for creation from Employee dashboard
+            String role = (String) userData.get("role");
+            String roleUpper = role == null ? "" : role.toUpperCase();
+            if (!("FPO".equals(roleUpper) || "EMPLOYEE".equals(roleUpper) || "FARMER".equals(roleUpper))) {
+                String friendlyMessage = "Access denied: Employees can only create FPO, Employee, and Farmer users.";
+                return ResponseEntity.status(403).body(Map.of(
+                    "message", friendlyMessage
+                ));
+            }
+
+            // Create the FPO user
+            FPOUser user = FPOUser.builder()
+                .fpo(fpo) // Use the FPO entity
+                .firstName((String) userData.get("firstName"))
+                .lastName((String) userData.get("lastName"))
+                .email((String) userData.get("email"))
+                .phoneNumber((String) userData.get("phoneNumber"))
+                .passwordHash(passwordEncoder.encode((String) userData.get("password")))
+                .role(Role.valueOf(roleUpper))
+                .status(UserStatus.APPROVED)
+                .build();
+
+            FPOUser savedUser = fpoUserRepository.save(user);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "FPO user created successfully");
+            response.put("user", savedUser);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "Error creating FPO user: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
         }
     }
 }
