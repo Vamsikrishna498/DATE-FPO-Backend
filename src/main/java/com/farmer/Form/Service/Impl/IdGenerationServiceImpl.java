@@ -7,6 +7,7 @@ import com.farmer.Form.Repository.CodeFormatRepository;
 import com.farmer.Form.Service.IdGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -222,43 +223,56 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     
     /**
      * Ensures that EMPLOYEE code format exists in the database
-     * If it doesn't exist, creates it automatically
+     * If it doesn't exist or has issues, logs a warning
+     * Does NOT override user-configured prefixes
      */
+    @Transactional
     private void ensureEmployeeCodeFormatExists() {
-        Optional<CodeFormat> existingFormat = codeFormatRepository.findByCodeTypeAndIsActiveTrue(CodeFormat.CodeType.EMPLOYEE);
+        System.out.println("🔍 Checking EMPLOYEE code format in database...");
         
-        if (!existingFormat.isPresent()) {
-            System.out.println("⚠️ EMPLOYEE code format not found in database. Creating it automatically...");
+        // Fetch all EMPLOYEE code formats (both active and inactive)
+        List<CodeFormat> allEmployeeFormats = codeFormatRepository.findAll().stream()
+            .filter(cf -> cf.getCodeType() == CodeFormat.CodeType.EMPLOYEE)
+            .toList();
+        
+        System.out.println("📊 Found " + allEmployeeFormats.size() + " EMPLOYEE code format(s) in database");
+        
+        if (!allEmployeeFormats.isEmpty()) {
+            // Check the existing format
+            CodeFormat existingFormat = allEmployeeFormats.get(0);
+            System.out.println("📋 Existing EMPLOYEE format - ID: " + existingFormat.getId() + 
+                             ", Prefix: '" + existingFormat.getPrefix() + "'" +
+                             ", Active: " + existingFormat.getIsActive() +
+                             ", Current Number: " + existingFormat.getCurrentNumber());
             
-            // Check if inactive format exists
-            List<CodeFormat> allEmployeeFormats = codeFormatRepository.findAll().stream()
-                .filter(cf -> cf.getCodeType() == CodeFormat.CodeType.EMPLOYEE)
-                .toList();
+            // Only fix if prefix is NULL or empty (respect user configuration)
+            boolean needsUpdate = false;
             
-            if (!allEmployeeFormats.isEmpty()) {
-                // Reactivate existing format
-                CodeFormat inactiveFormat = allEmployeeFormats.get(0);
-                inactiveFormat.setIsActive(true);
-                codeFormatRepository.save(inactiveFormat);
-                System.out.println("✅ Reactivated existing EMPLOYEE code format");
-            } else {
-                // Create new EMPLOYEE code format
-                CodeFormat newFormat = CodeFormat.builder()
-                    .codeType(CodeFormat.CodeType.EMPLOYEE)
-                    .prefix("DATE_EMP")
-                    .startingNumber(0)
-                    .currentNumber(0)
-                    .description("Employee ID format with DATE_EMP prefix")
-                    .isActive(true)
-                    .createdBy("system")
-                    .updatedBy("system")
-                    .build();
-                    
-                codeFormatRepository.save(newFormat);
-                System.out.println("✅ Created new EMPLOYEE code format with prefix: DATE_EMP");
+            if (existingFormat.getPrefix() == null || existingFormat.getPrefix().trim().isEmpty()) {
+                System.out.println("❌ ERROR: EMPLOYEE format has NULL or empty prefix!");
+                System.out.println("❌ Please set the Employee Prefix in Personalization UI");
+                System.out.println("❌ Cannot generate employee ID without a valid prefix!");
+                // Don't auto-fix - let admin configure via UI
+                throw new RuntimeException("EMPLOYEE code format prefix is not configured. Please configure it in Personalization settings.");
+            }
+            
+            if (!existingFormat.getIsActive()) {
+                System.out.println("⚠️ EMPLOYEE format is inactive! Activating...");
+                existingFormat.setIsActive(true);
+                existingFormat.setUpdatedBy("system");
+                codeFormatRepository.save(existingFormat);
+                System.out.println("✅ Activated EMPLOYEE code format");
+                needsUpdate = true;
+            }
+            
+            if (!needsUpdate) {
+                System.out.println("✅ EMPLOYEE code format is ready - Prefix: '" + existingFormat.getPrefix() + "', Active: true");
             }
         } else {
-            System.out.println("✅ EMPLOYEE code format exists and is active");
+            // No EMPLOYEE format exists at all
+            System.out.println("❌ ERROR: No EMPLOYEE code format found in database!");
+            System.out.println("❌ Please configure Employee ID format in Personalization UI");
+            throw new RuntimeException("EMPLOYEE code format not found. Please configure it in Personalization settings.");
         }
     }
     
