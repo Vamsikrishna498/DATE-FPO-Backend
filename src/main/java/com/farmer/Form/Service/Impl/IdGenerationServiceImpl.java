@@ -211,9 +211,55 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     @Override
     public String generateEmployeeId(String state, String district) {
         System.out.println("🔄 Generating employee ID for state: " + state + ", district: " + district);
+        
+        // Ensure EMPLOYEE code format exists before generating ID
+        ensureEmployeeCodeFormatExists();
+        
         String generatedId = generateIdFromCodeFormat(CodeFormat.CodeType.EMPLOYEE);
         System.out.println("✅ Generated employee ID: " + generatedId);
         return generatedId;
+    }
+    
+    /**
+     * Ensures that EMPLOYEE code format exists in the database
+     * If it doesn't exist, creates it automatically
+     */
+    private void ensureEmployeeCodeFormatExists() {
+        Optional<CodeFormat> existingFormat = codeFormatRepository.findByCodeTypeAndIsActiveTrue(CodeFormat.CodeType.EMPLOYEE);
+        
+        if (!existingFormat.isPresent()) {
+            System.out.println("⚠️ EMPLOYEE code format not found in database. Creating it automatically...");
+            
+            // Check if inactive format exists
+            List<CodeFormat> allEmployeeFormats = codeFormatRepository.findAll().stream()
+                .filter(cf -> cf.getCodeType() == CodeFormat.CodeType.EMPLOYEE)
+                .toList();
+            
+            if (!allEmployeeFormats.isEmpty()) {
+                // Reactivate existing format
+                CodeFormat inactiveFormat = allEmployeeFormats.get(0);
+                inactiveFormat.setIsActive(true);
+                codeFormatRepository.save(inactiveFormat);
+                System.out.println("✅ Reactivated existing EMPLOYEE code format");
+            } else {
+                // Create new EMPLOYEE code format
+                CodeFormat newFormat = CodeFormat.builder()
+                    .codeType(CodeFormat.CodeType.EMPLOYEE)
+                    .prefix("DATE_EMP")
+                    .startingNumber(0)
+                    .currentNumber(0)
+                    .description("Employee ID format with DATE_EMP prefix")
+                    .isActive(true)
+                    .createdBy("system")
+                    .updatedBy("system")
+                    .build();
+                    
+                codeFormatRepository.save(newFormat);
+                System.out.println("✅ Created new EMPLOYEE code format with prefix: DATE_EMP");
+            }
+        } else {
+            System.out.println("✅ EMPLOYEE code format exists and is active");
+        }
     }
     
     /**
