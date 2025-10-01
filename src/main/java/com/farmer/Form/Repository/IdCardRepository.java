@@ -36,4 +36,7 @@ public interface IdCardRepository extends JpaRepository<IdCard, Long> {
     List<IdCard> findByHolderNameContainingAndType(@Param("name") String name, @Param("cardType") IdCard.CardType cardType);
     
     Long countByStatus(IdCard.CardStatus status);
+
+	// New: strictly fetch by holder and card type to avoid cross-type collisions
+	List<IdCard> findByHolderIdAndCardType(String holderId, IdCard.CardType cardType);
 }
