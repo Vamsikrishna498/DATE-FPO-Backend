@@ -212,68 +212,9 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     @Override
     public String generateEmployeeId(String state, String district) {
         System.out.println("🔄 Generating employee ID for state: " + state + ", district: " + district);
-        
-        // Ensure EMPLOYEE code format exists before generating ID
-        ensureEmployeeCodeFormatExists();
-        
         String generatedId = generateIdFromCodeFormat(CodeFormat.CodeType.EMPLOYEE);
         System.out.println("✅ Generated employee ID: " + generatedId);
         return generatedId;
-    }
-    
-    /**
-     * Ensures that EMPLOYEE code format exists in the database
-     * If it doesn't exist or has issues, logs a warning
-     * Does NOT override user-configured prefixes
-     */
-    @Transactional
-    private void ensureEmployeeCodeFormatExists() {
-        System.out.println("🔍 Checking EMPLOYEE code format in database...");
-        
-        // Fetch all EMPLOYEE code formats (both active and inactive)
-        List<CodeFormat> allEmployeeFormats = codeFormatRepository.findAll().stream()
-            .filter(cf -> cf.getCodeType() == CodeFormat.CodeType.EMPLOYEE)
-            .toList();
-        
-        System.out.println("📊 Found " + allEmployeeFormats.size() + " EMPLOYEE code format(s) in database");
-        
-        if (!allEmployeeFormats.isEmpty()) {
-            // Check the existing format
-            CodeFormat existingFormat = allEmployeeFormats.get(0);
-            System.out.println("📋 Existing EMPLOYEE format - ID: " + existingFormat.getId() + 
-                             ", Prefix: '" + existingFormat.getPrefix() + "'" +
-                             ", Active: " + existingFormat.getIsActive() +
-                             ", Current Number: " + existingFormat.getCurrentNumber());
-            
-            // Only fix if prefix is NULL or empty (respect user configuration)
-            boolean needsUpdate = false;
-            
-            if (existingFormat.getPrefix() == null || existingFormat.getPrefix().trim().isEmpty()) {
-                System.out.println("❌ ERROR: EMPLOYEE format has NULL or empty prefix!");
-                System.out.println("❌ Please set the Employee Prefix in Personalization UI");
-                System.out.println("❌ Cannot generate employee ID without a valid prefix!");
-                // Don't auto-fix - let admin configure via UI
-                throw new RuntimeException("EMPLOYEE code format prefix is not configured. Please configure it in Personalization settings.");
-            }
-            
-            if (!existingFormat.getIsActive()) {
-                System.out.println("⚠️ EMPLOYEE format is inactive! Activating...");
-                existingFormat.setIsActive(true);
-                existingFormat.setUpdatedBy("system");
-                codeFormatRepository.save(existingFormat);
-                System.out.println("✅ Activated EMPLOYEE code format");
-                needsUpdate = true;
-            }
-            
-            if (!needsUpdate) {
-                System.out.println("✅ EMPLOYEE code format is ready - Prefix: '" + existingFormat.getPrefix() + "', Active: true");
-            }
-        } else {
-            // No EMPLOYEE format exists at all
-            System.out.println("❌ ERROR: No EMPLOYEE code format found in database!");
-            System.out.println("❌ Please configure Employee ID format in Personalization UI");
-            throw new RuntimeException("EMPLOYEE code format not found. Please configure it in Personalization settings.");
-        }
     }
     
     /**
@@ -292,12 +233,21 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         Optional<CodeFormat> codeFormatOpt = codeFormatRepository.findByCodeTypeAndIsActiveTrue(codeType);
         
         if (!codeFormatOpt.isPresent()) {
-            // Fallback to default format if no configuration found
-            System.out.println("⚠️ No CodeFormat found for " + codeType + ", using default format");
-            return generateDefaultId(codeType);
+            // Don't fallback - throw clear error message
+            System.out.println("❌ ERROR: No active CodeFormat found for " + codeType);
+            System.out.println("❌ Please configure " + codeType + " ID format in Personalization UI");
+            throw new RuntimeException(codeType + " code format not found or not active. Please configure it in Personalization settings.");
         }
         
         CodeFormat codeFormat = codeFormatOpt.get();
+        
+        // Check if prefix is valid
+        if (codeFormat.getPrefix() == null || codeFormat.getPrefix().trim().isEmpty()) {
+            System.out.println("❌ ERROR: " + codeType + " CodeFormat has NULL or empty prefix!");
+            System.out.println("❌ Please set the prefix in Personalization UI");
+            throw new RuntimeException(codeType + " code format prefix is not configured. Please set it in Personalization settings.");
+        }
+        
         System.out.println("📋 Found CodeFormat: '" + codeFormat.getPrefix() + "' (length: " + codeFormat.getPrefix().length() + "), current number: " + codeFormat.getCurrentNumber());
         
         String generatedId;
