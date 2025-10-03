@@ -36,6 +36,13 @@ public class EmployeeServiceImpl implements EmployeeService {
     public Employee saveEmployee(Employee updated) {
         // If ID is null, treat as a new employee
         if (updated.getId() == null) {
+            // Check for existing email
+            if (updated.getEmail() != null && !updated.getEmail().trim().isEmpty()) {
+                repository.findByEmail(updated.getEmail()).ifPresent(existingEmployee -> {
+                    throw new RuntimeException("Email already registered: " + updated.getEmail());
+                });
+            }
+            
             Employee savedNew = repository.save(updated);
             // Generate Employee ID card immediately for newly created employees
             try {
@@ -142,6 +149,13 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public Employee createEmployeeBySuperAdmin(Employee employee) {
+        // Check for existing email
+        if (employee.getEmail() != null && !employee.getEmail().trim().isEmpty()) {
+            repository.findByEmail(employee.getEmail()).ifPresent(existingEmployee -> {
+                throw new RuntimeException("Email already registered: " + employee.getEmail());
+            });
+        }
+        
         Employee saved = repository.save(employee);
         // Generate Employee ID card using configured EMPLOYEE code format
         try {

@@ -366,12 +366,20 @@ public class FPOController {
             FPO fpo = fpoRepository.findById(fpoId)
                 .orElseThrow(() -> new RuntimeException("FPO not found with ID: " + fpoId));
             
+            // Check for existing email
+            String email = (String) employeeData.get("email");
+            if (email != null && !email.trim().isEmpty()) {
+                fpoUserRepository.findByEmail(email).ifPresent(existingUser -> {
+                    throw new RuntimeException("Email already registered: " + email);
+                });
+            }
+            
             // Create FPOUser (FPO-specific employee)
             com.farmer.Form.Entity.FPOUser fpoUser = com.farmer.Form.Entity.FPOUser.builder()
                 .fpo(fpo)
                 .firstName((String) employeeData.get("firstName"))
                 .lastName((String) employeeData.get("lastName"))
-                .email((String) employeeData.get("email"))
+                .email(email)
                 .phoneNumber((String) employeeData.get("phoneNumber"))
                 .role(com.farmer.Form.Entity.Role.EMPLOYEE)
                 .status(com.farmer.Form.Entity.UserStatus.APPROVED)

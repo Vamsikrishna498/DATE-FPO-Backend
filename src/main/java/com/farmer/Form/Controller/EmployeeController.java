@@ -59,12 +59,21 @@ public class EmployeeController {
             String photoFile = fileStorageService.storeFile(dto.getPhoto(), "photos");
             String passbookFile = fileStorageService.storeFile(dto.getPassbook(), "passbooks");
             String docFile = fileStorageService.storeFile(dto.getDocumentFile(), "documents");
- 
+
             Employee employee = EmployeeMapper.toEntity(dto, photoFile, passbookFile, docFile);
             Employee saved = employeeService.saveEmployee(employee);
             return ResponseEntity.ok(saved);
- 
-        } catch (IOException | MultipartException e) {
+
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Email already registered")) {
+                return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            }
+            // Handle file upload errors
+            if (e instanceof MultipartException) {
+                return ResponseEntity.badRequest().body("❌ File upload failed: " + e.getMessage());
+            }
+            throw e; // Re-throw other runtime exceptions
+        } catch (IOException e) {
             return ResponseEntity.badRequest().body("❌ File upload failed: " + e.getMessage());
         }
     }

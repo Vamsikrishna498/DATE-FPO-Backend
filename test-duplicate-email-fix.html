@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Duplicate Email Prevention</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .test-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .test-button {
+            background-color: #27ae60;
+            margin-bottom: 10px;
+        }
+        .test-button:hover {
+            background-color: #229954;
+        }
+        .clear-button {
+            background-color: #e74c3c;
+        }
+        .clear-button:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Duplicate Email Prevention</h1>
+        
+        <div class="test-section">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li>Click "Create First Farmer" to add a farmer with email <strong>test@example.com</strong></li>
+                <li>Click "Try Duplicate Email" to attempt creating another farmer with the same email</li>
+                <li>Verify that the second attempt returns an error message</li>
+                <li>Click "Create Different Email" to test successful creation with a different email</li>
+            </ol>
+        </div>
+
+        <div class="form-group">
+            <label for="apiUrl">API Base URL:</label>
+            <input type="text" id="apiUrl" value="http://localhost:8080/api/farmers" placeholder="Enter API URL">
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="test-button" onclick="createFirstFarmer()">Create First Farmer (test@example.com)</button>
+            <button class="test-button" onclick="createDuplicateEmail()">Try Duplicate Email</button>
+            <button class="test-button" onclick="createDifferentEmail()">Create Different Email</button>
+            <button class="clear-button" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let farmerCounter = 1;
+
+        function showResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = message;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function createFarmerData(email, firstName = null) {
+            const baseName = firstName || `TestFarmer${farmerCounter}`;
+            return {
+                salutation: "Mr",
+                firstName: baseName,
+                lastName: "TestUser",
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: `987654321${farmerCounter}`,
+                email: email,
+                nationality: "Indian",
+                country: "India",
+                state: "Karnataka",
+                district: "Bangalore",
+                block: "TestBlock",
+                village: "TestVillage",
+                pincode: "560001",
+                education: "Graduate",
+                experience: "5 years",
+                currentLandHolding: 2.5,
+                currentCrop: "Rice",
+                currentNetIncome: 50000,
+                currentSoilTest: true,
+                proposedLandHolding: 3.0,
+                proposedCrop: "Wheat",
+                proposedNetIncome: 75000,
+                proposedSoilTest: false
+            };
+        }
+
+        async function createFarmer(email, firstName = null, testName = '') {
+            const apiUrl = document.getElementById('apiUrl').value;
+            
+            try {
+                showResult(`🔄 ${testName} - Attempting to create farmer with email: ${email}`, 'info');
+                
+                const farmerData = createFarmerData(email, firstName);
+                const formData = new FormData();
+                formData.append('farmerDto', JSON.stringify(farmerData));
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    farmerCounter++;
+                    showResult(`✅ ${testName} - SUCCESS: Farmer created with ID: ${result.id || 'Unknown'}`, 'success');
+                } else {
+                    showResult(`❌ ${testName} - ERROR: ${result.error || result.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`💥 ${testName} - EXCEPTION: ${error.message}`, 'error');
+            }
+        }
+
+        async function createFirstFarmer() {
+            await createFarmer('test@example.com', 'FirstFarmer', 'First Farmer Creation');
+        }
+
+        async function createDuplicateEmail() {
+            await createFarmer('test@example.com', 'SecondFarmer', 'Duplicate Email Test');
+        }
+
+        async function createDifferentEmail() {
+            await createFarmer('different@example.com', 'DifferentFarmer', 'Different Email Test');
+        }
+
+        // Show initial info
+        showResult('🚀 Ready to test duplicate email prevention! Click the buttons above to run tests.', 'info');
+    </script>
+</body>
+</html>

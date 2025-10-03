@@ -163,9 +163,9 @@ const SuperAdminDashboard = () => {
                       onChange={(e) => setSelectedRole(e.target.value)}
                       className="role-select"
                     >
+                      <option value="FPO">FPO</option>
                       <option value="FARMER">Farmer</option>
                       <option value="EMPLOYEE">Employee</option>
-                      <option value="ADMIN">Admin</option>
                     </select>
                     
                     <button 

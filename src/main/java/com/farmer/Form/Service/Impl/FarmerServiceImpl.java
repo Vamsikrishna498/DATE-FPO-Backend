@@ -59,6 +59,13 @@ public class FarmerServiceImpl implements FarmerService {
     public FarmerDTO createFarmer(FarmerDTO dto, MultipartFile photo, MultipartFile passbookPhoto,
                                   MultipartFile aadhaar, MultipartFile soilTestCertificate) {
         try {
+            // Check for existing email
+            if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+                farmerRepository.findByEmail(dto.getEmail()).ifPresent(farmer -> {
+                    throw new RuntimeException("Email already registered: " + dto.getEmail());
+                });
+            }
+            
             String photoFile = (photo != null && !photo.isEmpty())
                     ? fileStorageService.storeFile(photo, "photos") : null;
             String passbookFile = (passbookPhoto != null && !passbookPhoto.isEmpty())
@@ -203,6 +210,13 @@ public class FarmerServiceImpl implements FarmerService {
 
     @Override
     public Farmer createFarmerBySuperAdmin(Farmer farmer) {
+        // Check for existing email
+        if (farmer.getEmail() != null && !farmer.getEmail().trim().isEmpty()) {
+            farmerRepository.findByEmail(farmer.getEmail()).ifPresent(existingFarmer -> {
+                throw new RuntimeException("Email already registered: " + farmer.getEmail());
+            });
+        }
+        
         Farmer savedFarmer = farmerRepository.save(farmer);
         
         // Generate ID card immediately for Super Admin created farmers

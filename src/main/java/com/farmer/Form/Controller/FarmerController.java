@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/farmers")
@@ -31,7 +32,7 @@ public class FarmerController {
 
     // ✅ Create farmer with multipart/form-data
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FarmerDTO> createFarmer(
+    public ResponseEntity<?> createFarmer(
             @RequestPart("farmerDto") String farmerDtoJson,
             @RequestPart(value = "photo", required = false) MultipartFile photo,
             @RequestPart(value = "passbookPhoto", required = false) MultipartFile passbookPhoto,
@@ -39,17 +40,24 @@ public class FarmerController {
             @RequestPart(value = "soilTestCertificate", required = false) MultipartFile soilTestCertificate
     ) throws JsonProcessingException {
 
-        FarmerDTO farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDTO.class);
+        try {
+            FarmerDTO farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDTO.class);
 
-        FarmerDTO createdFarmer = service.createFarmer(
-                farmerDTO,
-                photo,
-                passbookPhoto,
-                aadhaar,
-                soilTestCertificate
-        );
+            FarmerDTO createdFarmer = service.createFarmer(
+                    farmerDTO,
+                    photo,
+                    passbookPhoto,
+                    aadhaar,
+                    soilTestCertificate
+            );
 
-        return ResponseEntity.ok(createdFarmer);
+            return ResponseEntity.ok(createdFarmer);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Email already registered")) {
+                return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            }
+            throw e; // Re-throw other runtime exceptions
+        }
     }
 
     // ✅ Get farmer by ID

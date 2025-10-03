@@ -148,8 +148,15 @@ public class AdminController {
     }
 
     @PostMapping("/farmers")
-    public ResponseEntity<Farmer> createFarmer(@RequestBody Farmer farmer) {
-        return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
+    public ResponseEntity<?> createFarmer(@RequestBody Farmer farmer) {
+        try {
+            return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Email already registered")) {
+                return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            }
+            throw e; // Re-throw other runtime exceptions
+        }
     }
 
     @PutMapping("/farmers/{id}")
@@ -193,8 +200,15 @@ public class AdminController {
     }
 
     @PostMapping("/employees")
-    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
-        return ResponseEntity.ok(employeeService.createEmployeeBySuperAdmin(employee));
+    public ResponseEntity<?> createEmployee(@RequestBody Employee employee) {
+        try {
+            return ResponseEntity.ok(employeeService.createEmployeeBySuperAdmin(employee));
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Email already registered")) {
+                return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            }
+            throw e; // Re-throw other runtime exceptions
+        }
     }
 
     @PutMapping("/employees/{id}")

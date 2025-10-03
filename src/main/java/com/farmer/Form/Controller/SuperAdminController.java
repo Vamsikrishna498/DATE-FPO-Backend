@@ -149,7 +149,7 @@ public class SuperAdminController {
     }
 
     @PostMapping(value = "/farmers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Farmer> createFarmer(
+    public ResponseEntity<?> createFarmer(
             @RequestPart("farmerDto") String farmerDtoJson,
             @RequestPart(value = "photo", required = false) MultipartFile photo,
             @RequestPart(value = "passbookPhoto", required = false) MultipartFile passbookPhoto,
@@ -163,12 +163,26 @@ public class SuperAdminController {
         
         // For now, we'll create the farmer without file handling in SuperAdmin
         // The ID card generation will still work
-        return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
+        try {
+            return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Email already registered")) {
+                return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            }
+            throw e; // Re-throw other runtime exceptions
+        }
     }
     
     @PostMapping(value = "/farmers/json", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Farmer> createFarmerJson(@RequestBody Farmer farmer) {
-        return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
+    public ResponseEntity<?> createFarmerJson(@RequestBody Farmer farmer) {
+        try {
+            return ResponseEntity.ok(farmerService.createFarmerBySuperAdmin(farmer));
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Email already registered")) {
+                return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            }
+            throw e; // Re-throw other runtime exceptions
+        }
     }
 
     @PutMapping("/farmers/{id}")
@@ -240,8 +254,15 @@ public class SuperAdminController {
     }
 
     @PostMapping("/employees")
-    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
-        return ResponseEntity.ok(employeeService.createEmployeeBySuperAdmin(employee));
+    public ResponseEntity<?> createEmployee(@RequestBody Employee employee) {
+        try {
+            return ResponseEntity.ok(employeeService.createEmployeeBySuperAdmin(employee));
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Email already registered")) {
+                return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            }
+            throw e; // Re-throw other runtime exceptions
+        }
     }
 
     @PutMapping("/employees/{id}")

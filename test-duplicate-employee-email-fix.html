@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Duplicate Employee Email Prevention</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .test-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .test-button {
+            background-color: #27ae60;
+            margin-bottom: 10px;
+        }
+        .test-button:hover {
+            background-color: #229954;
+        }
+        .clear-button {
+            background-color: #e74c3c;
+        }
+        .clear-button:hover {
+            background-color: #c0392b;
+        }
+        .endpoint-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+        }
+        .endpoint-button {
+            background-color: #17a2b8;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .endpoint-button:hover {
+            background-color: #138496;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Duplicate Employee Email Prevention</h1>
+        
+        <div class="test-section">
+            <h3>📋 Test Instructions:</h3>
+            <ol>
+                <li>Select an endpoint to test (Employee Controller or Admin Controller)</li>
+                <li>Click "Create First Employee" to add an employee with email <strong>emp@example.com</strong></li>
+                <li>Click "Try Duplicate Email" to attempt creating another employee with the same email</li>
+                <li>Verify that the second attempt returns an error message</li>
+                <li>Click "Create Different Email" to test successful creation with a different email</li>
+            </ol>
+        </div>
+
+        <div class="form-group">
+            <label for="apiUrl">API Base URL:</label>
+            <input type="text" id="apiUrl" value="http://localhost:8080" placeholder="Enter API Base URL">
+        </div>
+
+        <div class="endpoint-section">
+            <h4>🎯 Select Endpoint to Test:</h4>
+            <button class="endpoint-button" onclick="selectEndpoint('employee')">Employee Controller (/api/employees)</button>
+            <button class="endpoint-button" onclick="selectEndpoint('admin')">Admin Controller (/api/admin/employees)</button>
+            <button class="endpoint-button" onclick="selectEndpoint('superadmin')">Super Admin Controller (/api/superadmin/employees)</button>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="test-button" onclick="createFirstEmployee()">Create First Employee (emp@example.com)</button>
+            <button class="test-button" onclick="createDuplicateEmail()">Try Duplicate Email</button>
+            <button class="test-button" onclick="createDifferentEmail()">Create Different Email</button>
+            <button class="clear-button" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let employeeCounter = 1;
+        let currentEndpoint = 'employee';
+
+        function showResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = message;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function selectEndpoint(endpoint) {
+            currentEndpoint = endpoint;
+            showResult(`🎯 Selected endpoint: ${endpoint}`, 'info');
+        }
+
+        function getApiUrl() {
+            const baseUrl = document.getElementById('apiUrl').value;
+            const endpoints = {
+                'employee': '/api/employees',
+                'admin': '/api/admin/employees',
+                'superadmin': '/api/superadmin/employees'
+            };
+            return baseUrl + endpoints[currentEndpoint];
+        }
+
+        function createEmployeeData(email, firstName = null) {
+            const baseName = firstName || `TestEmployee${employeeCounter}`;
+            return {
+                salutation: "Mr",
+                firstName: baseName,
+                lastName: "TestEmployee",
+                dateOfBirth: "1990-01-01",
+                gender: "Male",
+                contactNumber: `987654321${employeeCounter}`,
+                email: email,
+                role: "EMPLOYEE",
+                designation: "Field Officer",
+                joiningDate: "2024-01-01",
+                salary: 30000,
+                address: "Test Address",
+                state: "Karnataka",
+                district: "Bangalore",
+                block: "TestBlock",
+                village: "TestVillage",
+                pincode: "560001"
+            };
+        }
+
+        async function createEmployee(email, firstName = null, testName = '') {
+            const apiUrl = getApiUrl();
+            
+            try {
+                showResult(`🔄 ${testName} - Attempting to create employee with email: ${email}`, 'info');
+                showResult(`📍 Using endpoint: ${apiUrl}`, 'info');
+                
+                const employeeData = createEmployeeData(email, firstName);
+                
+                // For Employee Controller, we need to use FormData (multipart)
+                if (currentEndpoint === 'employee') {
+                    const formData = new FormData();
+                    formData.append('salutation', employeeData.salutation);
+                    formData.append('firstName', employeeData.firstName);
+                    formData.append('lastName', employeeData.lastName);
+                    formData.append('dateOfBirth', employeeData.dateOfBirth);
+                    formData.append('gender', employeeData.gender);
+                    formData.append('contactNumber', employeeData.contactNumber);
+                    formData.append('email', employeeData.email);
+                    formData.append('role', employeeData.role);
+                    formData.append('designation', employeeData.designation);
+                    formData.append('joiningDate', employeeData.joiningDate);
+                    formData.append('salary', employeeData.salary);
+                    formData.append('address', employeeData.address);
+                    formData.append('state', employeeData.state);
+                    formData.append('district', employeeData.district);
+                    formData.append('block', employeeData.block);
+                    formData.append('village', employeeData.village);
+                    formData.append('pincode', employeeData.pincode);
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        employeeCounter++;
+                        showResult(`✅ ${testName} - SUCCESS: Employee created with ID: ${result.id || 'Unknown'}`, 'success');
+                    } else {
+                        showResult(`❌ ${testName} - ERROR: ${result.error || result.message || 'Unknown error'}`, 'error');
+                    }
+                } else {
+                    // For Admin and SuperAdmin controllers, use JSON
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(employeeData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        employeeCounter++;
+                        showResult(`✅ ${testName} - SUCCESS: Employee created with ID: ${result.id || 'Unknown'}`, 'success');
+                    } else {
+                        showResult(`❌ ${testName} - ERROR: ${result.error || result.message || 'Unknown error'}`, 'error');
+                    }
+                }
+            } catch (error) {
+                showResult(`💥 ${testName} - EXCEPTION: ${error.message}`, 'error');
+            }
+        }
+
+        async function createFirstEmployee() {
+            await createEmployee('emp@example.com', 'FirstEmployee', 'First Employee Creation');
+        }
+
+        async function createDuplicateEmail() {
+            await createEmployee('emp@example.com', 'SecondEmployee', 'Duplicate Email Test');
+        }
+
+        async function createDifferentEmail() {
+            await createEmployee('different@example.com', 'DifferentEmployee', 'Different Email Test');
+        }
+
+        // Show initial info
+        showResult('🚀 Ready to test duplicate employee email prevention! Select an endpoint and click the buttons above to run tests.', 'info');
+    </script>
+</body>
+</html>
