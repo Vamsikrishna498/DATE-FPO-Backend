@@ -18,7 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Random;
  
 @Service
 @RequiredArgsConstructor
@@ -189,10 +188,8 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public String generateTempPassword() {
-        // Generate a temporary password with format: Emp@123456
-        Random random = new Random();
-        int number = random.nextInt(900000) + 100000; // 6-digit number
-        return "Emp@" + number;
+        // Generate a temporary password with format: Temp@12345 (consistent with UserService)
+        return "Temp@" + (int)(Math.random() * 100000);
     }
 
     @Override
