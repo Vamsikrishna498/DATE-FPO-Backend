@@ -57,6 +57,10 @@ public class User {
 
     private boolean forcePasswordChange;
     
+    @ManyToOne
+    @JoinColumn(name = "company_id")
+    private Company company;
+    
     
     @PrePersist
     protected void onCreate() {
