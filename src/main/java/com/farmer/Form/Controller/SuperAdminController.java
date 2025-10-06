@@ -325,4 +325,34 @@ public class SuperAdminController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    // ✅ Approve user and assign role (Super Admin)
+    @PutMapping("/users/{id}/approve")
+    public ResponseEntity<String> approveUserRegistration(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String role = request.get("role");
+        if (role == null || role.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Role is required");
+        }
+        try {
+            userService.approveAndAssignRole(id, role.trim());
+            return ResponseEntity.ok("User approved and role assigned successfully. Credentials sent to user email.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    // ✅ Reject user registration (Super Admin)
+    @PutMapping("/users/{id}/reject")
+    public ResponseEntity<String> rejectUserRegistration(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String reason = request.get("reason");
+        if (reason == null || reason.trim().isEmpty()) {
+            reason = "Rejected by Super Admin";
+        }
+        try {
+            userService.updateUserStatus(id, "REJECTED");
+            return ResponseEntity.ok("User registration rejected successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
 } 

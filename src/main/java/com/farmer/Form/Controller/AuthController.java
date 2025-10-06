@@ -462,6 +462,21 @@ public class AuthController {
         }
     }
 
+    // ✅ Reject user registration (Super Admin)
+    @PutMapping("/users/{id}/reject")
+    public ResponseEntity<String> rejectUserRegistration(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String reason = request.get("reason");
+        if (reason == null || reason.trim().isEmpty()) {
+            reason = "Rejected by Super Admin";
+        }
+        try {
+            userService.updateUserStatus(id, "REJECTED");
+            return ResponseEntity.ok("User registration rejected successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
     // 🔧 Test endpoint
     @GetMapping("/test")
     public String test() {
