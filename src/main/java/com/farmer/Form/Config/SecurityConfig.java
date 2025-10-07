@@ -53,11 +53,16 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Public assets and anonymous endpoints
                 .requestMatchers(API_PUBLIC_PATH).permitAll()
                 .requestMatchers(UPLOADS_PATH).permitAll()
                 .requestMatchers("/api/public/uploads/**").permitAll()
+                // Allow authentication endpoints (login, otp, etc.)
+                .requestMatchers("/api/auth/**").permitAll()
+                // Any explicitly whitelisted dashboards/data
                 .requestMatchers(SUPER_ADMIN_DASHBOARD).permitAll()
                 .requestMatchers(ADMIN_FARMERS_KYC).permitAll()
+                // Everything else requires authentication
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
             )
