@@ -98,11 +98,34 @@ public class UsersRolesManagementController {
         return ResponseEntity.ok(Map.of("message", "Role deleted successfully"));
     }
 
+    @GetMapping("/debug/check-tables")
+    public ResponseEntity<Map<String, Object>> checkTables() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // Try to get count of user_roles table
+            long roleCount = configurationService.getAllUserRoles().size();
+            response.put("user_roles_table_exists", true);
+            response.put("user_roles_count", roleCount);
+            response.put("status", "success");
+        } catch (Exception e) {
+            response.put("user_roles_table_exists", false);
+            response.put("error", e.getMessage());
+            response.put("status", "error");
+            log.error("Error checking tables: {}", e.getMessage(), e);
+        }
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/roles")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
     public ResponseEntity<List<UserRoleDTO>> getAllRoles() {
-        List<UserRoleDTO> roles = configurationService.getAllUserRoles();
-        return ResponseEntity.ok(roles);
+        try {
+            List<UserRoleDTO> roles = configurationService.getAllUserRoles();
+            return ResponseEntity.ok(roles);
+        } catch (Exception e) {
+            log.error("Error getting all roles: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(null);
+        }
     }
 
     @GetMapping("/roles/active")
