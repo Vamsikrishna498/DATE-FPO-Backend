@@ -252,8 +252,9 @@ public class UserService {
     public void approveAndAssignRole(Long userId, String role) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
-        if (user.getStatus() != com.farmer.Form.Entity.UserStatus.PENDING) {
-            throw new IllegalStateException("User is not pending approval.");
+        if (user.getStatus() != com.farmer.Form.Entity.UserStatus.PENDING && 
+            user.getStatus() != com.farmer.Form.Entity.UserStatus.REJECTED) {
+            throw new IllegalStateException("User is not in a state that allows approval. Current status: " + user.getStatus());
         }
         String tempPassword = generateTempPassword();
         user.setRole(com.farmer.Form.Entity.Role.valueOf(role.toUpperCase()));
@@ -289,8 +290,9 @@ public class UserService {
     public void approveAndAssignRoleByAdmin(Long userId, String role) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
-        if (user.getStatus() != com.farmer.Form.Entity.UserStatus.PENDING) {
-            throw new IllegalStateException("User is not pending approval.");
+        if (user.getStatus() != com.farmer.Form.Entity.UserStatus.PENDING && 
+            user.getStatus() != com.farmer.Form.Entity.UserStatus.REJECTED) {
+            throw new IllegalStateException("User is not in a state that allows approval. Current status: " + user.getStatus());
         }
         String tempPassword = generateTempPassword();
         user.setRole(com.farmer.Form.Entity.Role.valueOf(role.toUpperCase()));

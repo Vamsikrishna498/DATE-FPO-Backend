@@ -8,6 +8,12 @@ public class FarmerMapper {
     public static FarmerDTO toDto(Farmer farmer) {
         if (farmer == null) return null;
 
+        // Debug logging
+        System.out.println("🔍 FarmerMapper.toDto - Input Entity:");
+        System.out.println("  - Contact Number: " + farmer.getContactNumber());
+        System.out.println("  - First Name: " + farmer.getFirstName());
+        System.out.println("  - Last Name: " + farmer.getLastName());
+
         return FarmerDTO.builder()
                 .id(farmer.getId())
                 .photoFileName(farmer.getPhotoFileName())
@@ -70,6 +76,12 @@ public class FarmerMapper {
 
     public static Farmer toEntity(FarmerDTO dto, String photoFileName, String passbookFileName, String documentFileName, String soilTestCertificateFileName) {
         if (dto == null) return null;
+
+        // Debug logging
+        System.out.println("🔍 FarmerMapper.toEntity - Input DTO:");
+        System.out.println("  - Contact Number: " + dto.getContactNumber());
+        System.out.println("  - First Name: " + dto.getFirstName());
+        System.out.println("  - Last Name: " + dto.getLastName());
 
         return Farmer.builder()
                 .id(dto.getId())

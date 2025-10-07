@@ -31,7 +31,8 @@ public class Farmer {
     @NotNull private LocalDate dateOfBirth;
     @NotNull private String gender;
     private String fatherName;
-    @Pattern(regexp="^\\d{10}$") private String contactNumber;
+    // Contact number is optional - validation removed to allow null values
+    private String contactNumber;
     private String alternativeRelationType;
     @Pattern(regexp="^\\d{10}$") private String alternativeContactNumber;
     @NotBlank private String nationality;

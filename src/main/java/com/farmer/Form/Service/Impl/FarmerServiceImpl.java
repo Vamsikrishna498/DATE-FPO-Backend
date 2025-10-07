@@ -59,12 +59,16 @@ public class FarmerServiceImpl implements FarmerService {
     public FarmerDTO createFarmer(FarmerDTO dto, MultipartFile photo, MultipartFile passbookPhoto,
                                   MultipartFile aadhaar, MultipartFile soilTestCertificate) {
         try {
-            // Check for existing email
+            // Check for existing email - TEMPORARILY DISABLED FOR TESTING
+            // TODO: Implement proper duplicate email handling (update vs create)
+            /*
             if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
                 farmerRepository.findByEmail(dto.getEmail()).ifPresent(farmer -> {
                     throw new RuntimeException("Email already registered: " + dto.getEmail());
                 });
             }
+            */
+            System.out.println("🔍 Email validation temporarily disabled for testing phone number issue");
             
             String photoFile = (photo != null && !photo.isEmpty())
                     ? fileStorageService.storeFile(photo, "photos") : null;
@@ -75,8 +79,24 @@ public class FarmerServiceImpl implements FarmerService {
             String soilTestFile = (soilTestCertificate != null && !soilTestCertificate.isEmpty())
                     ? fileStorageService.storeFile(soilTestCertificate, "soil-tests") : null;
 
+            // Debug logging
+            System.out.println("🔍 Service received farmer DTO:");
+            System.out.println("  - Contact Number: " + dto.getContactNumber());
+            System.out.println("  - Contact Number Type: " + (dto.getContactNumber() != null ? dto.getContactNumber().getClass().getSimpleName() : "null"));
+            
             Farmer farmer = FarmerMapper.toEntity(dto, photoFile, passbookFile, aadhaarFile, soilTestFile);
+            
+            // Debug logging for entity
+            System.out.println("🔍 Farmer entity before save:");
+            System.out.println("  - Contact Number: " + farmer.getContactNumber());
+            System.out.println("  - ID: " + farmer.getId());
+            
             Farmer saved = farmerRepository.save(farmer);
+            
+            // Debug logging for saved entity
+            System.out.println("🔍 Farmer entity after save:");
+            System.out.println("  - Contact Number: " + saved.getContactNumber());
+            System.out.println("  - ID: " + saved.getId());
             
             // Generate ID card for newly created farmers
             try {

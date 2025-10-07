@@ -42,6 +42,13 @@ public class FarmerController {
 
         try {
             FarmerDTO farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDTO.class);
+            
+            // Debug logging
+            System.out.println("🔍 Backend received farmer data:");
+            System.out.println("  - Contact Number: " + farmerDTO.getContactNumber());
+            System.out.println("  - Contact Number Type: " + (farmerDTO.getContactNumber() != null ? farmerDTO.getContactNumber().getClass().getSimpleName() : "null"));
+            System.out.println("  - First Name: " + farmerDTO.getFirstName());
+            System.out.println("  - Last Name: " + farmerDTO.getLastName());
 
             FarmerDTO createdFarmer = service.createFarmer(
                     farmerDTO,
@@ -50,6 +57,11 @@ public class FarmerController {
                     aadhaar,
                     soilTestCertificate
             );
+            
+            // Debug logging for created farmer
+            System.out.println("🔍 Created farmer data:");
+            System.out.println("  - Contact Number: " + createdFarmer.getContactNumber());
+            System.out.println("  - ID: " + createdFarmer.getId());
 
             return ResponseEntity.ok(createdFarmer);
         } catch (RuntimeException e) {

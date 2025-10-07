@@ -71,24 +71,8 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return web -> web.ignoring().requestMatchers(UPLOADS_PATH);
-    }
-
-    @Bean
-    @Order(0)
-    public SecurityFilterChain staticUploadsChain(HttpSecurity http) throws Exception {
-        http
-            .securityMatcher(new AntPathRequestMatcher(UPLOADS_PATH))
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .requestCache(c -> c.disable())
-            .securityContext(c -> c.disable())
-            .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
-            .authorizeHttpRequests(a -> a.anyRequest().permitAll());
-        return http.build();
-    }
+    // Removed redundant WebSecurityCustomizer and staticUploadsChain 
+    // since uploads path is already handled by permitAll() in main filter chain
 
     @Bean
     public AuthenticationManager authenticationManager() {
