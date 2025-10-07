@@ -34,6 +34,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Employee assignments
     List<User> findByAssignedEmployeeId(Long employeeId);
     
+    // Company relationships
+    List<User> findByCompany(com.farmer.Form.Entity.Company company);
+    
     // Search and filter methods
     @Query("SELECT u FROM User u WHERE u.role = :role AND " +
            "(:name IS NULL OR u.name LIKE %:name%) AND " +

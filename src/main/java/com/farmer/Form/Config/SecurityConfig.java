@@ -18,6 +18,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -50,6 +54,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (no authentication required)
                 .requestMatchers("/api/public/**").permitAll()
+<<<<<<< HEAD
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/register").permitAll()
                 .requestMatchers("/api/auth/send-otp").permitAll()
@@ -61,6 +66,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/states").permitAll()
                 .requestMatchers("/api/auth/pincode/**").permitAll()
                 .requestMatchers("/api/auth/check-email").permitAll()
+=======
+                .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/public/uploads/**").permitAll()
+>>>>>>> origin/master
                 .requestMatchers("/api/super-admin/dashboard/**").permitAll()
                 .requestMatchers("/api/admin/farmers-with-kyc").permitAll()
                 // All other endpoints require authentication
@@ -69,6 +78,27 @@ public class SecurityConfig {
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
+        return http.build();
+    }
+
+    // Completely ignore security filters for static uploads to avoid 401 on <img> requests
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().requestMatchers("/uploads/**");
+    }
+
+    // High-priority chain that fully bypasses security for static uploads
+    @Bean
+    @Order(0)
+    public SecurityFilterChain staticUploadsChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher(new AntPathRequestMatcher("/uploads/**"))
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .requestCache(c -> c.disable())
+            .securityContext(c -> c.disable())
+            .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
+            .authorizeHttpRequests(a -> a.anyRequest().permitAll());
         return http.build();
     }
  
