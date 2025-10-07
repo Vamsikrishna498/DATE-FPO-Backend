@@ -1,9 +1,8 @@
 package com.farmer.Form.Config;
- 
+
 import java.util.List;
- 
+
 import org.springframework.context.annotation.Bean;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -11,7 +10,7 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -25,58 +24,58 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
- 
+
 import com.farmer.Form.security.CustomUserDetailsService;
 import com.farmer.Form.security.JwtAuthenticationFilter;
- 
+
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
- 
-    @Value("http://localhost:3000")
-    private List<String> allowedOrigins;
- 
+
+    private static final String UPLOADS_PATH = "/uploads/**";
+    private static final String API_PUBLIC_PATH = "/api/public/**";
+    private static final String SUPER_ADMIN_DASHBOARD = "/api/super-admin/dashboard/**";
+    private static final String ADMIN_FARMERS_KYC = "/api/admin/farmers-with-kyc";
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
- 
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           CustomUserDetailsService userDetailsService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
     }
- 
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers(API_PUBLIC_PATH).permitAll()
+                .requestMatchers(UPLOADS_PATH).permitAll()
                 .requestMatchers("/api/public/uploads/**").permitAll()
-                .requestMatchers("/api/super-admin/dashboard/**").permitAll()
-                .requestMatchers("/api/admin/farmers-with-kyc").permitAll()
-                .requestMatchers("/api/**").permitAll()
-                .anyRequest().permitAll()
-            );
-            // .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
- 
+                .requestMatchers(SUPER_ADMIN_DASHBOARD).permitAll()
+                .requestMatchers(ADMIN_FARMERS_KYC).permitAll()
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
-    // Completely ignore security filters for static uploads to avoid 401 on <img> requests
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring().requestMatchers("/uploads/**");
+        return web -> web.ignoring().requestMatchers(UPLOADS_PATH);
     }
 
-    // High-priority chain that fully bypasses security for static uploads
     @Bean
     @Order(0)
     public SecurityFilterChain staticUploadsChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher(new AntPathRequestMatcher("/uploads/**"))
+            .securityMatcher(new AntPathRequestMatcher(UPLOADS_PATH))
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .requestCache(c -> c.disable())
@@ -85,12 +84,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(a -> a.anyRequest().permitAll());
         return http.build();
     }
- 
+
     @Bean
     public AuthenticationManager authenticationManager() {
         return new ProviderManager(List.of(authenticationProvider()));
     }
- 
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -98,12 +97,12 @@ public class SecurityConfig {
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
- 
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
- 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

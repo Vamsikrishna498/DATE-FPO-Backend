@@ -60,4 +60,14 @@ public class FPOCropController {
         fpoService.updateCropStatus(fpoId, cropId, FPOCrop.CropStatus.valueOf(status));
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{cropId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
+    public ResponseEntity<Void> deleteCrop(
+            @PathVariable Long fpoId,
+            @PathVariable Long cropId) {
+        log.info("Deleting crop {} from FPO with ID: {}", cropId, fpoId);
+        fpoService.deleteCrop(fpoId, cropId);
+        return ResponseEntity.noContent().build();
+    }
 }

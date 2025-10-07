@@ -4,28 +4,34 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
- 
+
 import javax.crypto.SecretKey;
- 
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import com.farmer.Form.Entity.FPOUser;
- 
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
- 
+import lombok.extern.slf4j.Slf4j;
+
 @Component
+@Slf4j
 public class JwtUtil {
- 
-    private static final long EXPIRATION_TIME = 86400000; // 1 day in milliseconds
-    private static final String SECRET_KEY = "kM3q4TbN8Gf9CWPc6rXLvTpyHZmF7xNCzKJQzTQ69no=";
- 
-    private static SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET_KEY));
+
+    @Value("${jwt.expiration:86400000}")
+    private long expirationTime;
+
+    @Value("${jwt.secret}")
+    private String secretKey;
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
     }
  
     // Generate JWT token
@@ -45,7 +51,7 @@ public class JwtUtil {
         return Jwts.builder().claims(claims) // Add custom claims
                 .subject(username) // Set the subject (username)
                 .issuedAt(new Date()) // Set issue date
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // Set expiration date
+                .expiration(new Date(System.currentTimeMillis() + expirationTime)) // Set expiration date
                 .signWith(getSigningKey()) // FIX: Removed MacAlgorithm parameter
                 .compact();
     }
@@ -87,17 +93,16 @@ public class JwtUtil {
                     .claims(claims)
                     .subject(username)
                     .issuedAt(new Date())
-                    .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                    .expiration(new Date(System.currentTimeMillis() + expirationTime))
                     .signWith(getSigningKey())
                     .compact();
             
-            System.out.println("JWT Generation - Username: " + username);
-            System.out.println("JWT Generation - Token length: " + (token != null ? token.length() : "null"));
+            log.info("JWT Generation - Username: {}", username);
+            log.debug("JWT Generation - Token length: {}", (token != null ? token.length() : "null"));
             
             return token;
         } catch (Exception e) {
-            System.err.println("JWT Generation Error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("JWT Generation Error: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to generate JWT token for FPO user", e);
         }
     }

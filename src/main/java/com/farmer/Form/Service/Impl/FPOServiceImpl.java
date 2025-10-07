@@ -565,6 +565,19 @@ public class FPOServiceImpl implements FPOService {
         fpoServiceRepository.save(service);
     }
 
+    @Override
+    public void removeService(Long fpoId, Long serviceId) {
+        log.info("Deleting service {} from FPO with ID: {}", serviceId, fpoId);
+        com.farmer.Form.Entity.FPOService service = fpoServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found with ID: " + serviceId));
+        if (service.getFpo() == null || !service.getFpo().getId().equals(fpoId)) {
+            throw new ResourceNotFoundException("Service not found with ID: " + serviceId + " in FPO: " + fpoId);
+        }
+        
+        fpoServiceRepository.delete(service);
+        log.info("Service {} deleted successfully from FPO with ID: {}", serviceId, fpoId);
+    }
+
     // FPO Crops Management
     @Override
     @Transactional(readOnly = true)
@@ -852,6 +865,18 @@ public class FPOServiceImpl implements FPOService {
         
         product.setStockQuantity(newStock);
         fpoProductRepository.save(product);
+    }
+
+    @Override
+    public void deleteProduct(Long fpoId, Long productId) {
+        log.info("Deleting product {} from FPO with ID: {}", productId, fpoId);
+        FPOProduct product = fpoProductRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + productId));
+        if (product.getFpo() == null || !product.getFpo().getId().equals(fpoId)) {
+            throw new ResourceNotFoundException("Product not found with ID: " + productId + " in FPO: " + fpoId);
+        }
+        fpoProductRepository.delete(product);
+        log.info("Product {} deleted successfully from FPO with ID: {}", productId, fpoId);
     }
 
     // FPO Product Categories Management

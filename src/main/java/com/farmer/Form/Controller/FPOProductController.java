@@ -60,6 +60,16 @@ public class FPOProductController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/{productId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
+    public ResponseEntity<Void> deleteProduct(
+            @PathVariable Long fpoId,
+            @PathVariable Long productId) {
+        log.info("Deleting product {} from FPO with ID: {}", productId, fpoId);
+        fpoService.deleteProduct(fpoId, productId);
+        return ResponseEntity.noContent().build();
+    }
+
     // Product Categories
     @GetMapping("/categories")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO') or hasRole('FARMER')")
