@@ -62,4 +62,14 @@ public class FPOServiceController {
         fpoService.updateServiceStatus(fpoId, serviceId, FPOService.ServiceStatus.valueOf(status));
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{serviceId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN') or hasRole('EMPLOYEE') or hasRole('FPO')")
+    public ResponseEntity<Void> removeService(
+            @PathVariable Long fpoId,
+            @PathVariable Long serviceId) {
+        log.info("Deleting service {} from FPO with ID: {}", serviceId, fpoId);
+        fpoService.removeService(fpoId, serviceId);
+        return ResponseEntity.noContent().build();
+    }
 }

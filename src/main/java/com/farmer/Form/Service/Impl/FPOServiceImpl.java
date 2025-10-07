@@ -565,6 +565,19 @@ public class FPOServiceImpl implements FPOService {
         fpoServiceRepository.save(service);
     }
 
+    @Override
+    public void removeService(Long fpoId, Long serviceId) {
+        log.info("Deleting service {} from FPO with ID: {}", serviceId, fpoId);
+        com.farmer.Form.Entity.FPOService service = fpoServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found with ID: " + serviceId));
+        if (service.getFpo() == null || !service.getFpo().getId().equals(fpoId)) {
+            throw new ResourceNotFoundException("Service not found with ID: " + serviceId + " in FPO: " + fpoId);
+        }
+        
+        fpoServiceRepository.delete(service);
+        log.info("Service {} deleted successfully from FPO with ID: {}", serviceId, fpoId);
+    }
+
     // FPO Crops Management
     @Override
     @Transactional(readOnly = true)

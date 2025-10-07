@@ -48,14 +48,27 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Public endpoints (no authentication required)
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/auth/login").permitAll()
+                .requestMatchers("/api/auth/register").permitAll()
+                .requestMatchers("/api/auth/send-otp").permitAll()
+                .requestMatchers("/api/auth/verify-otp").permitAll()
+                .requestMatchers("/api/auth/forgot-password").permitAll()
+                .requestMatchers("/api/auth/forgot-user-id").permitAll()
+                .requestMatchers("/api/auth/reset-password").permitAll()
+                .requestMatchers("/api/auth/countries").permitAll()
+                .requestMatchers("/api/auth/states").permitAll()
+                .requestMatchers("/api/auth/pincode/**").permitAll()
+                .requestMatchers("/api/auth/check-email").permitAll()
                 .requestMatchers("/api/super-admin/dashboard/**").permitAll()
                 .requestMatchers("/api/admin/farmers-with-kyc").permitAll()
-                .requestMatchers("/api/**").permitAll()
-                .anyRequest().permitAll()
-            );
-            // .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
- 
+                // All other endpoints require authentication
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
  
