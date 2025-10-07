@@ -79,6 +79,7 @@ public interface FPOService {
     FPOProductDTO createProduct(Long fpoId, FPOProductCreationDTO productDTO);
     FPOProductDTO updateProduct(Long fpoId, Long productId, FPOProductCreationDTO productDTO);
     void updateProductStock(Long fpoId, Long productId, Integer newStock);
+    void deleteProduct(Long fpoId, Long productId);
     
     // FPO Product Categories Management
     List<FPOProductCategoryDTO> getFPOProductCategories(Long fpoId);

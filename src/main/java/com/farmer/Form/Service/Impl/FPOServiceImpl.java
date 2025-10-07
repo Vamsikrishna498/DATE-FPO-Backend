@@ -867,6 +867,18 @@ public class FPOServiceImpl implements FPOService {
         fpoProductRepository.save(product);
     }
 
+    @Override
+    public void deleteProduct(Long fpoId, Long productId) {
+        log.info("Deleting product {} from FPO with ID: {}", productId, fpoId);
+        FPOProduct product = fpoProductRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + productId));
+        if (product.getFpo() == null || !product.getFpo().getId().equals(fpoId)) {
+            throw new ResourceNotFoundException("Product not found with ID: " + productId + " in FPO: " + fpoId);
+        }
+        fpoProductRepository.delete(product);
+        log.info("Product {} deleted successfully from FPO with ID: {}", productId, fpoId);
+    }
+
     // FPO Product Categories Management
     @Override
     @Transactional(readOnly = true)
