@@ -50,8 +50,15 @@ public class CompanyController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
-        companyService.deleteCompany(id);
-        return ResponseEntity.ok(Map.of("message", "Company deleted"));
+        try {
+            companyService.deleteCompany(id);
+            return ResponseEntity.ok(Map.of("message", "Company deleted successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete company: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/branding/{tenant}")

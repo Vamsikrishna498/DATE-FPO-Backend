@@ -120,6 +120,19 @@ public class CompanyService {
     }
 
     public void deleteCompany(Long id) {
+        // First, check if company exists
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found with id: " + id));
+        
+        // Check if there are users associated with this company
+        java.util.List<com.farmer.Form.Entity.User> users = userRepository.findByCompany(company);
+        if (!users.isEmpty()) {
+            // Option 1: Delete all users associated with the company
+            // This is the most thorough approach
+            userRepository.deleteAll(users);
+        }
+        
+        // Now delete the company
         companyRepository.deleteById(id);
     }
 
