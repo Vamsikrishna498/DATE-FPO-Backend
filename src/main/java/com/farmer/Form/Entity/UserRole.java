@@ -29,12 +29,12 @@ public class UserRole {
     @Column(name = "description")
     private String description;
     
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "role_modules", joinColumns = @JoinColumn(name = "role_id"))
     @Column(name = "module_name")
     private Set<String> allowedModules;
     
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "role_permissions", joinColumns = @JoinColumn(name = "role_id"))
     @Column(name = "permission")
     private Set<String> permissions;

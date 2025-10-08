@@ -80,12 +80,15 @@ public class ConfigurationService {
         log.info("Deleted user role: {}", userRole.getRoleName());
     }
     
+    @Transactional(readOnly = true)
     public List<UserRoleDTO> getAllUserRoles() {
-        return userRoleRepository.findAll().stream()
+        List<UserRole> userRoles = userRoleRepository.findAll();
+        return userRoles.stream()
                 .map(UserRoleDTO::fromEntity)
                 .collect(Collectors.toList());
     }
     
+    @Transactional(readOnly = true)
     public UserRoleDTO getUserRoleById(Long id) {
         UserRole userRole = userRoleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found with id: " + id));

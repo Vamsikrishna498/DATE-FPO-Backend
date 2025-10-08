@@ -27,18 +27,42 @@ public class UserRoleDTO {
     private LocalDateTime updatedAt;
     
     public static UserRoleDTO fromEntity(UserRole userRole) {
-        return UserRoleDTO.builder()
+        UserRoleDTO.UserRoleDTOBuilder builder = UserRoleDTO.builder()
                 .id(userRole.getId())
                 .roleName(userRole.getRoleName())
                 .description(userRole.getDescription())
-                .allowedModules(userRole.getAllowedModules())
-                .permissions(userRole.getPermissions())
                 .isActive(userRole.getIsActive())
                 .createdBy(userRole.getCreatedBy())
                 .updatedBy(userRole.getUpdatedBy())
                 .createdAt(userRole.getCreatedAt())
-                .updatedAt(userRole.getUpdatedAt())
-                .build();
+                .updatedAt(userRole.getUpdatedAt());
+        
+        // Safely handle lazy-loaded collections
+        try {
+            Set<String> allowedModules = userRole.getAllowedModules();
+            if (allowedModules != null && !allowedModules.isEmpty()) {
+                builder.allowedModules(allowedModules);
+            } else {
+                builder.allowedModules(new java.util.HashSet<>());
+            }
+        } catch (Exception e) {
+            // If lazy loading fails, set empty set
+            builder.allowedModules(new java.util.HashSet<>());
+        }
+        
+        try {
+            Set<String> permissions = userRole.getPermissions();
+            if (permissions != null && !permissions.isEmpty()) {
+                builder.permissions(permissions);
+            } else {
+                builder.permissions(new java.util.HashSet<>());
+            }
+        } catch (Exception e) {
+            // If lazy loading fails, set empty set
+            builder.permissions(new java.util.HashSet<>());
+        }
+        
+        return builder.build();
     }
     
     public UserRole toEntity() {
