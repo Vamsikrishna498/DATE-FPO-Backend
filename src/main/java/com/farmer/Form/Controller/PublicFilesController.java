@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/public")
@@ -29,17 +30,50 @@ public class PublicFilesController {
                     .resolve("company-logos")
                     .resolve(String.valueOf(companyId))
                     .resolve(filename);
+            System.out.println("🔍 Logo request: companyId=" + companyId + ", filename=" + filename);
+            System.out.println("🔍 Resolved file path: " + file.toString());
             Resource resource = new UrlResource(file.toUri());
             if (!resource.exists()) {
+                System.out.println("❌ Logo file not found: " + file.toString());
                 return ResponseEntity.notFound().build();
             }
             MediaType mediaType = detectMediaType(filename);
+            System.out.println("✅ Logo file found: " + file.toString() + ", mediaType: " + mediaType);
             return ResponseEntity.ok()
                     .cacheControl(CacheControl.noCache())
                     .contentType(mediaType)
                     .body(resource);
         } catch (MalformedURLException e) {
+            System.out.println("❌ Invalid file path: " + e.getMessage());
             return ResponseEntity.internalServerError().body("Invalid file path");
+        }
+    }
+
+    // Test endpoint to list available logos
+    @GetMapping("/test/logos/{companyId}")
+    public ResponseEntity<?> testLogos(@PathVariable Long companyId) {
+        try {
+            Path companyDir = Paths.get(System.getProperty("user.dir"))
+                    .resolve("uploads")
+                    .resolve("company-logos")
+                    .resolve(String.valueOf(companyId));
+            
+            if (!companyDir.toFile().exists()) {
+                return ResponseEntity.ok().body(Map.of("error", "Company directory not found", "path", companyDir.toString()));
+            }
+            
+            java.util.List<String> files = java.util.Arrays.stream(companyDir.toFile().listFiles())
+                    .map(f -> f.getName())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok().body(Map.of(
+                "companyId", companyId,
+                "directory", companyDir.toString(),
+                "files", files,
+                "logoUrls", files.stream().map(f -> "/api/public/uploads/company-logos/" + companyId + "/" + f).collect(java.util.stream.Collectors.toList())
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
 

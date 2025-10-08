@@ -13,6 +13,7 @@ import java.util.Optional;
 
 public interface FPOUserRepository extends JpaRepository<FPOUser, Long> {
     List<FPOUser> findByFpo(FPO fpo);
+    List<FPOUser> findByFpoId(Long fpoId);
     boolean existsByEmail(String email);
     boolean existsByPhoneNumber(String phoneNumber);
     Optional<FPOUser> findByEmail(String email);

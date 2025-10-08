@@ -95,8 +95,10 @@ public class CompanyService {
     }
 
     public Map<String, Object> getBranding(String tenant) {
+        System.out.println("🏢 Getting branding for tenant: " + tenant);
         Optional<Company> optional = companyRepository.findByShortName(tenant);
         if (optional.isEmpty()) {
+            System.out.println("❌ No company found for tenant: " + tenant + ", returning default branding");
             return Map.of(
                     "name", "Default",
                     "shortName", "default",
@@ -107,6 +109,10 @@ public class CompanyService {
             );
         }
         Company c = optional.get();
+        System.out.println("✅ Found company: " + c.getName() + " (ID: " + c.getId() + ")");
+        System.out.println("📋 Company logo fields: dark=" + c.getLogoDark() + ", light=" + c.getLogoLight() + 
+                          ", smallDark=" + c.getLogoSmallDark() + ", smallLight=" + c.getLogoSmallLight());
+        
         Map<String, Object> out = new HashMap<>();
         out.put("id", c.getId());
         out.put("name", c.getName());
@@ -116,6 +122,8 @@ public class CompanyService {
         out.put("logoLight", fileUrl(c.getId(), c.getLogoLight()));
         out.put("logoSmallDark", fileUrl(c.getId(), c.getLogoSmallDark()));
         out.put("logoSmallLight", fileUrl(c.getId(), c.getLogoSmallLight()));
+        
+        System.out.println("🎨 Final branding data: " + out);
         return out;
     }
 
@@ -148,7 +156,9 @@ public class CompanyService {
 
     private String fileUrl(Long companyId, String rel) {
         if (rel == null) return null;
-        return "/uploads/company-logos/" + companyId + "/" + Paths.get(rel).getFileName();
+        String url = "/uploads/company-logos/" + companyId + "/" + Paths.get(rel).getFileName();
+        System.out.println("🔗 Generated logo URL: " + url + " (companyId=" + companyId + ", rel=" + rel + ")");
+        return url;
     }
 
     public Map<String, Object> getBrandingByEmail(String email) {

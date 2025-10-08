@@ -1,0 +1,11 @@
+Get-Content : Cannot find path 'C:\Users\User\Desktop\Vamsi\DATE Project 
+Version 1 Code\Date-Backend-demo\logs\application.log' because it does not 
+exist.
+At line:1 char:1
++ Get-Content -Path 'logs/application.log' -Tail 50
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Users\User\D...application.l 
+   og:String) [Get-Content], ItemNotFoundException
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetCo 
+   ntentCommand
+ 

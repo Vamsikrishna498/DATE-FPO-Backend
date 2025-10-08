@@ -34,6 +34,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // Log all incoming requests for debugging
+        String requestUri = request.getRequestURI();
+        String method = request.getMethod();
+        log.debug("JWT Filter processing: {} {}", method, requestUri);
+
         // Define a list of public URLs (no token required)
         String[] publicUrls = {
             "/api/auth",
@@ -43,20 +48,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/error"
         };
 
-        // Get the requested URL
-        String requestUri = request.getRequestURI();
-
         // Check if the requested URL is public
         boolean isPublicUrl = false;
         for (String url : publicUrls) {
             if (requestUri.startsWith(url)) {
                 isPublicUrl = true;
+                log.debug("Public URL detected: {} matches {}", requestUri, url);
                 break;
             }
         }
 
         // If it's a public URL, skip token validation
         if (isPublicUrl) {
+            log.debug("Skipping JWT validation for public URL: {}", requestUri);
             filterChain.doFilter(request, response);
             return;
         }
@@ -70,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (jwtToken == null) {
-            log.info("No token found in request");
+            log.info("No token found in request for URL: {}", requestUri);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT Token is missing");
             return;
         }

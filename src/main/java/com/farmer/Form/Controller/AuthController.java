@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import com.farmer.Form.DTO.LoginRequest;
@@ -34,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -54,6 +56,7 @@ public class AuthController {
     // ✅ LOGIN
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
+        log.info("🔄 Login attempt for user: {}", request.getUserName());
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUserName(), request.getPassword())
@@ -82,6 +85,7 @@ public class AuthController {
             error.put("message", "Your account is not yet approved by admin.");
             return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body(error);
         } catch (Exception e) {
+            log.error("❌ Login failed for user: {} - Error: {}", request.getUserName(), e.getMessage());
             Map<String, Object> error = new HashMap<>();
             error.put("message", "Login failed: " + e.getMessage());
             return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body(error);
@@ -90,49 +94,103 @@ public class AuthController {
 
     // ✅ FPO LOGIN
     @PostMapping("/fpo-login")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> fpoLogin(@RequestBody Map<String, String> req) {
-        final String emailOrPhone = (req.get("email") != null && !req.get("email").isBlank())
-                ? req.get("email")
-                : req.get("userName");
-        String password = req.get("password");
-        
-        if (emailOrPhone == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Email and password are required"));
+        try {
+            log.info("🔄 FPO Login attempt started");
+            log.info("📧 Request data: {}", req);
+            
+            final String emailOrPhone = (req.get("email") != null && !req.get("email").isBlank())
+                    ? req.get("email")
+                    : req.get("userName");
+            String password = req.get("password");
+            
+            log.info("📧 Email/Phone: {}", emailOrPhone);
+            
+            if (emailOrPhone == null || password == null) {
+                log.warn("❌ Missing credentials - emailOrPhone: {}, password: {}", emailOrPhone, password != null ? "[PROVIDED]" : "[MISSING]");
+                return ResponseEntity.badRequest().body(Map.of("message", "Email and password are required"));
+            }
+            
+            // Try to find user by email first, then by phone
+            Optional<FPOUser> userOpt = fpoUserRepository.findByEmail(emailOrPhone);
+            if (userOpt.isEmpty()) {
+                userOpt = fpoUserRepository.findByPhoneNumber(emailOrPhone);
+            }
+            
+            if (userOpt.isEmpty()) {
+                log.warn("❌ No FPO user found with email/phone: {}", emailOrPhone);
+                return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
+            }
+            
+            FPOUser user = userOpt.get();
+            log.info("✅ FPO user found: ID={}, Email={}, Status={}", user.getId(), user.getEmail(), user.getStatus());
+            
+            // Check password
+            if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+                log.warn("❌ Password mismatch for user: {}", user.getEmail());
+                return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
+            }
+            
+            // Check if user is approved
+            if (user.getStatus() != com.farmer.Form.Entity.UserStatus.APPROVED) {
+                log.warn("❌ User not approved: {}", user.getEmail());
+                return ResponseEntity.status(401).body(Map.of("message", "Account inactive. Contact FPO admin."));
+            }
+            
+            FPO fpo = user.getFpo();
+            log.info("🏢 FPO: ID={}, Name={}", fpo != null ? fpo.getId() : "null", fpo != null ? fpo.getFpoName() : "null");
+            
+            // Generate JWT token for FPO user
+            String token = jwtUtil.generateTokenForFPOUser(user);
+            log.info("🎫 Token generated successfully, length: {}", token != null ? token.length() : "null");
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("message", "Login successful");
+            response.put("userId", user.getId());
+            response.put("email", user.getEmail());
+            response.put("role", user.getRole().name());
+            response.put("userType", user.getRole().name());
+            response.put("fpoId", fpo != null ? fpo.getId() : null);
+            response.put("fpoName", fpo != null ? fpo.getFpoName() : null);
+            
+            log.info("✅ FPO Login successful for user: {}", user.getEmail());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("❌ FPO Login error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
         }
-        
-        FPOUser user = fpoUserRepository.findByEmail(emailOrPhone)
-                .or(() -> fpoUserRepository.findByPhoneNumber(emailOrPhone))
-                .orElse(null);
-        if (user == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
+    }
+
+    // Test endpoint to check FPO users
+    @GetMapping("/test/fpo-users")
+    public ResponseEntity<?> testFPOUsers() {
+        try {
+            java.util.List<FPOUser> users = fpoUserRepository.findAll();
+            java.util.List<Map<String, Object>> userData = users.stream().map(user -> {
+                Map<String, Object> data = new HashMap<>();
+                data.put("id", user.getId());
+                data.put("email", user.getEmail());
+                data.put("phoneNumber", user.getPhoneNumber());
+                data.put("firstName", user.getFirstName());
+                data.put("lastName", user.getLastName());
+                data.put("role", user.getRole());
+                data.put("status", user.getStatus());
+                data.put("fpoId", user.getFpo() != null ? user.getFpo().getId() : null);
+                data.put("fpoName", user.getFpo() != null ? user.getFpo().getFpoName() : null);
+                return data;
+            }).collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "totalUsers", users.size(),
+                "users", userData
+            ));
+        } catch (Exception e) {
+            log.error("❌ Test FPO users error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
-        // Block login if FPO user is not active/approved
-        if (user.getStatus() != com.farmer.Form.Entity.UserStatus.APPROVED) {
-            return ResponseEntity.status(401).body(Map.of("message", "Account inactive. Contact FPO admin."));
-        }
-        
-        FPO fpo = user.getFpo();
-        
-        // Generate JWT token for FPO user
-        String token = jwtUtil.generateTokenForFPOUser(user);
-        
-        // Debug logging
-        System.out.println("FPO Login - User ID: " + user.getId());
-        System.out.println("FPO Login - User Email: " + user.getEmail());
-        System.out.println("FPO Login - FPO ID: " + (fpo != null ? fpo.getId() : "null"));
-        System.out.println("FPO Login - Generated Token: " + (token != null ? token.substring(0, Math.min(50, token.length())) + "..." : "null"));
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("message", "Login successful");
-        response.put("userId", user.getId());
-        response.put("email", user.getEmail());
-        response.put("role", user.getRole().name());
-        response.put("userType", user.getRole().name());
-        response.put("fpoId", fpo != null ? fpo.getId() : null);
-        response.put("fpoName", fpo != null ? fpo.getFpoName() : null);
-        
-        return ResponseEntity.ok(response);
     }
 
     // ✅ REGISTER
@@ -287,7 +345,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "Email or phone number is required"));
         }
         try {
-            String otp = otpService.generateAndSendOtp(emailOrPhone);
+            otpService.generateAndSendOtp(emailOrPhone);
             return ResponseEntity.ok(Map.of("message", "OTP re-sent successfully to " + emailOrPhone));
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("message", ex.getMessage()));
@@ -331,7 +389,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "Email or phone number is required."));
         }
         try {
-        String otp = otpService.generateAndSendOtp(emailOrPhone.trim());
+            otpService.generateAndSendOtp(emailOrPhone.trim());
             // The emailService.sendOtpEmail is already called inside otpService.generateAndSendOtp
             return ResponseEntity.ok(Map.of("message", "Password reset OTP sent successfully."));
         } catch (IllegalStateException ex) {
@@ -558,7 +616,7 @@ public class AuthController {
             }
             
             // Try to authenticate
-            Authentication authentication = authenticationManager.authenticate(
+            authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(userName, password)
             );
             
