@@ -25,12 +25,20 @@ public class CompanyService {
     private static final String UPLOAD_DIR = "uploads/company-logos";
 
     public Company createOrUpdateCompany(Company company) {
+        // Check for duplicates before saving
+        validateCompanyUniqueness(company);
         return companyRepository.save(company);
     }
 
     public Company createCompanyWithAdmin(Company company, String adminEmail, String adminPassword) {
+        // Check for duplicates before saving
+        validateCompanyUniqueness(company);
+        
         Company saved = companyRepository.save(company);
         if (adminEmail != null && !adminEmail.isBlank() && adminPassword != null && !adminPassword.isBlank()) {
+            // Validate admin user details for duplicates
+            validateAdminUserUniqueness(adminEmail, company.getPhone());
+            
             com.farmer.Form.Entity.User admin = new com.farmer.Form.Entity.User();
             admin.setName(company.getName() + " Admin");
             admin.setEmail(adminEmail);
@@ -44,6 +52,45 @@ public class CompanyService {
             userRepository.save(admin);
         }
         return saved;
+    }
+
+    private void validateCompanyUniqueness(Company company) {
+        // Check if company name already exists (for new companies or when name is being changed)
+        if (company.getId() == null || companyRepository.findById(company.getId()).map(c -> !c.getName().equals(company.getName())).orElse(true)) {
+            if (companyRepository.existsByName(company.getName())) {
+                throw new IllegalArgumentException("Company name '" + company.getName() + "' already exists. Please choose a different name.");
+            }
+        }
+
+        // Check if short name already exists (for new companies or when short name is being changed)
+        if (company.getId() == null || companyRepository.findById(company.getId()).map(c -> !c.getShortName().equals(company.getShortName())).orElse(true)) {
+            if (companyRepository.existsByShortName(company.getShortName())) {
+                throw new IllegalArgumentException("Company short name '" + company.getShortName() + "' already exists. Please choose a different short name.");
+            }
+        }
+
+        // Check if email already exists (for new companies or when email is being changed)
+        if (company.getId() == null || companyRepository.findById(company.getId()).map(c -> !c.getEmail().equals(company.getEmail())).orElse(true)) {
+            if (companyRepository.existsByEmail(company.getEmail())) {
+                throw new IllegalArgumentException("Company email '" + company.getEmail() + "' already exists. Please choose a different email.");
+            }
+        }
+    }
+
+    private void validateAdminUserUniqueness(String adminEmail, String adminPhone) {
+        // Check if admin email already exists
+        if (adminEmail != null && !adminEmail.isBlank()) {
+            if (userRepository.existsByEmail(adminEmail)) {
+                throw new IllegalArgumentException("Admin email '" + adminEmail + "' already exists. Please choose a different email.");
+            }
+        }
+
+        // Check if admin phone number already exists (if provided)
+        if (adminPhone != null && !adminPhone.isBlank() && !adminPhone.equals("0000000000")) {
+            if (userRepository.existsByPhoneNumber(adminPhone)) {
+                throw new IllegalArgumentException("Admin phone number '" + adminPhone + "' already exists. Please choose a different phone number.");
+            }
+        }
     }
 
     public Optional<Company> getCompany(Long id) {
@@ -150,9 +197,6 @@ public class CompanyService {
         return original.substring(original.lastIndexOf('.'));
     }
 
-    private String relative(Path base, Path file) {
-        return base.getFileName() + "/" + file.getFileName();
-    }
 
     private String fileUrl(Long companyId, String rel) {
         if (rel == null) return null;

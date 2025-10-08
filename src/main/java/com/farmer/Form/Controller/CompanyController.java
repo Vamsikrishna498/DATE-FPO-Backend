@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -28,18 +27,36 @@ public class CompanyController {
     }
 
     @PostMapping
-    public ResponseEntity<Company> create(@RequestBody CompanyCreationRequest request) {
-        Company company = request.toCompany();
-        if (request.getAdminEmail() != null && !request.getAdminEmail().isBlank()) {
-            return ResponseEntity.ok(companyService.createCompanyWithAdmin(company, request.getAdminEmail(), request.getAdminPassword()));
+    public ResponseEntity<?> create(@RequestBody CompanyCreationRequest request) {
+        try {
+            Company company = request.toCompany();
+            Company saved;
+            if (request.getAdminEmail() != null && !request.getAdminEmail().isBlank()) {
+                saved = companyService.createCompanyWithAdmin(company, request.getAdminEmail(), request.getAdminPassword());
+            } else {
+                saved = companyService.createOrUpdateCompany(company);
+            }
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "An unexpected error occurred: " + e.getMessage()));
         }
-        return ResponseEntity.ok(companyService.createOrUpdateCompany(company));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Company> update(@PathVariable Long id, @RequestBody Company company) {
-        company.setId(id);
-        return ResponseEntity.ok(companyService.createOrUpdateCompany(company));
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Company company) {
+        try {
+            company.setId(id);
+            Company updated = companyService.createOrUpdateCompany(company);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "An unexpected error occurred: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/{id}")
