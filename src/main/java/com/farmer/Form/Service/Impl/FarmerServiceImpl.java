@@ -255,19 +255,103 @@ public class FarmerServiceImpl implements FarmerService {
     @Override
     public Farmer updateFarmerBySuperAdmin(Long id, Farmer updatedFarmer) {
         Farmer farmer = getFarmerRawById(id);
-        // Update fields as needed
-        farmer.setFirstName(updatedFarmer.getFirstName());
-        farmer.setLastName(updatedFarmer.getLastName());
-        farmer.setDateOfBirth(updatedFarmer.getDateOfBirth());
-        farmer.setGender(updatedFarmer.getGender());
-        farmer.setContactNumber(updatedFarmer.getContactNumber());
-        farmer.setCountry(updatedFarmer.getCountry());
-        farmer.setState(updatedFarmer.getState());
-        farmer.setDistrict(updatedFarmer.getDistrict());
-        farmer.setBlock(updatedFarmer.getBlock());
-        farmer.setVillage(updatedFarmer.getVillage());
-        farmer.setPincode(updatedFarmer.getPincode());
-        // ... update other fields as needed
+        
+        // Update all relevant fields with null checks and validation
+        if (updatedFarmer.getFirstName() != null) {
+            farmer.setFirstName(updatedFarmer.getFirstName());
+        }
+        if (updatedFarmer.getMiddleName() != null) {
+            farmer.setMiddleName(updatedFarmer.getMiddleName());
+        }
+        if (updatedFarmer.getLastName() != null && !updatedFarmer.getLastName().trim().isEmpty()) {
+            farmer.setLastName(updatedFarmer.getLastName());
+        }
+        if (updatedFarmer.getSalutation() != null && !updatedFarmer.getSalutation().trim().isEmpty()) {
+            farmer.setSalutation(updatedFarmer.getSalutation());
+        }
+        if (updatedFarmer.getDateOfBirth() != null) {
+            farmer.setDateOfBirth(updatedFarmer.getDateOfBirth());
+        }
+        if (updatedFarmer.getGender() != null && !updatedFarmer.getGender().trim().isEmpty()) {
+            farmer.setGender(updatedFarmer.getGender());
+        }
+        if (updatedFarmer.getFatherName() != null) {
+            farmer.setFatherName(updatedFarmer.getFatherName());
+        }
+        if (updatedFarmer.getContactNumber() != null) {
+            farmer.setContactNumber(updatedFarmer.getContactNumber());
+        }
+        if (updatedFarmer.getAlternativeContactNumber() != null) {
+            farmer.setAlternativeContactNumber(updatedFarmer.getAlternativeContactNumber());
+        }
+        if (updatedFarmer.getAlternativeRelationType() != null) {
+            farmer.setAlternativeRelationType(updatedFarmer.getAlternativeRelationType());
+        }
+        if (updatedFarmer.getEmail() != null) {
+            farmer.setEmail(updatedFarmer.getEmail());
+        }
+        if (updatedFarmer.getNationality() != null && !updatedFarmer.getNationality().trim().isEmpty()) {
+            farmer.setNationality(updatedFarmer.getNationality());
+        }
+        if (updatedFarmer.getCountry() != null && !updatedFarmer.getCountry().trim().isEmpty()) {
+            farmer.setCountry(updatedFarmer.getCountry());
+        }
+        if (updatedFarmer.getState() != null) {
+            farmer.setState(updatedFarmer.getState());
+        }
+        if (updatedFarmer.getDistrict() != null) {
+            farmer.setDistrict(updatedFarmer.getDistrict());
+        }
+        if (updatedFarmer.getBlock() != null) {
+            farmer.setBlock(updatedFarmer.getBlock());
+        }
+        if (updatedFarmer.getVillage() != null) {
+            farmer.setVillage(updatedFarmer.getVillage());
+        }
+        if (updatedFarmer.getPincode() != null) {
+            farmer.setPincode(updatedFarmer.getPincode());
+        }
+        if (updatedFarmer.getEducation() != null) {
+            farmer.setEducation(updatedFarmer.getEducation());
+        }
+        if (updatedFarmer.getExperience() != null) {
+            farmer.setExperience(updatedFarmer.getExperience());
+        }
+        
+        // Update professional and crop information
+        if (updatedFarmer.getCurrentSurveyNumber() != null) {
+            farmer.setCurrentSurveyNumber(updatedFarmer.getCurrentSurveyNumber());
+        }
+        if (updatedFarmer.getCurrentLandHolding() != null) {
+            farmer.setCurrentLandHolding(updatedFarmer.getCurrentLandHolding());
+        }
+        if (updatedFarmer.getCurrentCrop() != null) {
+            farmer.setCurrentCrop(updatedFarmer.getCurrentCrop());
+        }
+        if (updatedFarmer.getCurrentNetIncome() != null) {
+            farmer.setCurrentNetIncome(updatedFarmer.getCurrentNetIncome());
+        }
+        if (updatedFarmer.getCurrentSoilTest() != null) {
+            farmer.setCurrentSoilTest(updatedFarmer.getCurrentSoilTest());
+        }
+        
+        // Ensure required fields have default values if they're null/empty
+        if (farmer.getSalutation() == null || farmer.getSalutation().trim().isEmpty()) {
+            farmer.setSalutation("Mr"); // Default value
+        }
+        if (farmer.getLastName() == null || farmer.getLastName().trim().isEmpty()) {
+            farmer.setLastName("Unknown"); // Default value
+        }
+        if (farmer.getGender() == null || farmer.getGender().trim().isEmpty()) {
+            farmer.setGender("Male"); // Default value
+        }
+        if (farmer.getNationality() == null || farmer.getNationality().trim().isEmpty()) {
+            farmer.setNationality("Indian"); // Default value
+        }
+        if (farmer.getCountry() == null || farmer.getCountry().trim().isEmpty()) {
+            farmer.setCountry("India"); // Default value
+        }
+        
         return farmerRepository.save(farmer);
     }
 

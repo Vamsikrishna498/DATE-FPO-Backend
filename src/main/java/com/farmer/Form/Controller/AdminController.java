@@ -160,8 +160,48 @@ public class AdminController {
     }
 
     @PutMapping("/farmers/{id}")
-    public ResponseEntity<Farmer> updateFarmer(@PathVariable Long id, @RequestBody Farmer farmer) {
-        return ResponseEntity.ok(farmerService.updateFarmerBySuperAdmin(id, farmer));
+    public ResponseEntity<?> updateFarmer(@PathVariable Long id, @RequestBody Farmer farmer) {
+        try {
+            System.out.println("🔍 AdminController: Updating farmer with ID: " + id);
+            System.out.println("🔍 AdminController: Farmer data received: " + farmer);
+            
+            // Validate required fields before processing
+            if (farmer.getSalutation() != null && farmer.getSalutation().trim().isEmpty()) {
+                farmer.setSalutation("Mr");
+            }
+            if (farmer.getLastName() != null && farmer.getLastName().trim().isEmpty()) {
+                farmer.setLastName("Unknown");
+            }
+            if (farmer.getGender() != null && farmer.getGender().trim().isEmpty()) {
+                farmer.setGender("Male");
+            }
+            if (farmer.getNationality() != null && farmer.getNationality().trim().isEmpty()) {
+                farmer.setNationality("Indian");
+            }
+            if (farmer.getCountry() != null && farmer.getCountry().trim().isEmpty()) {
+                farmer.setCountry("India");
+            }
+            
+            Farmer updatedFarmer = farmerService.updateFarmerBySuperAdmin(id, farmer);
+            System.out.println("✅ AdminController: Farmer updated successfully: " + updatedFarmer.getId());
+            return ResponseEntity.ok(updatedFarmer);
+        } catch (RuntimeException e) {
+            System.err.println("❌ AdminController: Error updating farmer: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Internal Server Error",
+                "message", e.getMessage(),
+                "timestamp", java.time.LocalDateTime.now()
+            ));
+        } catch (Exception e) {
+            System.err.println("❌ AdminController: Unexpected error updating farmer: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Internal Server Error",
+                "message", "An unexpected error occurred",
+                "timestamp", java.time.LocalDateTime.now()
+            ));
+        }
     }
 
     @DeleteMapping("/farmers/{id}")
@@ -212,8 +252,27 @@ public class AdminController {
     }
 
     @PutMapping("/employees/{id}")
-    public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
-        return ResponseEntity.ok(employeeService.updateEmployeeBySuperAdmin(id, employee));
+    public ResponseEntity<?> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
+        try {
+            Employee updatedEmployee = employeeService.updateEmployeeBySuperAdmin(id, employee);
+            return ResponseEntity.ok(updatedEmployee);
+        } catch (RuntimeException e) {
+            System.err.println("Error updating employee: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Internal Server Error",
+                "message", e.getMessage(),
+                "timestamp", java.time.LocalDateTime.now()
+            ));
+        } catch (Exception e) {
+            System.err.println("Unexpected error updating employee: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Internal Server Error",
+                "message", "An unexpected error occurred",
+                "timestamp", java.time.LocalDateTime.now()
+            ));
+        }
     }
 
     @DeleteMapping("/employees/{id}")
