@@ -29,6 +29,8 @@ public class AgeSettingCreationDTO {
     @Size(max = 500, message = "Description must not exceed 500 characters")
     private String description;
     
+    @NotBlank(message = "User type is required")
+    private String userType;
     
     @Builder.Default
     private Boolean isActive = true;

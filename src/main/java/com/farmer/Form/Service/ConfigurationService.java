@@ -460,23 +460,45 @@ public class ConfigurationService {
         }
     }
     
+    private String determineUserType(String name) {
+        if (name == null) return "GLOBAL";
+        
+        String lowerName = name.toLowerCase();
+        if (lowerName.contains("farmer") || lowerName.contains("agriculture")) {
+            return "FARMER";
+        } else if (lowerName.contains("employee") || lowerName.contains("staff")) {
+            return "EMPLOYEE";
+        } else if (lowerName.contains("admin") || lowerName.contains("administrator")) {
+            return "ADMIN";
+        } else if (lowerName.contains("fpo") || lowerName.contains("organization")) {
+            return "FPO";
+        } else {
+            return "GLOBAL";
+        }
+    }
+    
     public AgeSettingDTO createAgeSetting(AgeSettingCreationDTO creationDTO) {
         // Validate min and max values
         if (creationDTO.getMinValue() >= creationDTO.getMaxValue()) {
             throw new IllegalArgumentException("Minimum value must be less than maximum value");
         }
         
-        // Check if there's already an active age setting (only one global age setting allowed)
-        if (ageSettingRepository.existsByIsActiveTrue()) {
-            throw new IllegalArgumentException("An active age setting already exists. Only one global age setting is allowed.");
+        // Check if there's already an active age setting with the same name
+        if (ageSettingRepository.existsByNameAndIsActiveTrueAndIdNot(creationDTO.getName(), -1L)) {
+            throw new IllegalArgumentException("An active age setting with this name already exists. Please choose a different name.");
         }
+        
+        // Use userType from DTO, fallback to determineUserType if not provided
+        String userType = creationDTO.getUserType() != null && !creationDTO.getUserType().trim().isEmpty() 
+            ? creationDTO.getUserType() 
+            : determineUserType(creationDTO.getName());
         
         AgeSetting ageSetting = AgeSetting.builder()
                 .name(creationDTO.getName())
                 .minValue(creationDTO.getMinValue())
                 .maxValue(creationDTO.getMaxValue())
                 .description(creationDTO.getDescription())
-                .userType("GLOBAL") // Set as global age setting
+                .userType(userType)
                 .isActive(creationDTO.getIsActive())
                 .createdBy(creationDTO.getCreatedBy())
                 .build();

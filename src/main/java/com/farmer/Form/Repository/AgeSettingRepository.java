@@ -11,6 +11,8 @@ public interface AgeSettingRepository extends JpaRepository<AgeSetting, Long> {
     
     List<AgeSetting> findByIsActiveTrue();
     
+    List<AgeSetting> findByUserTypeAndIsActiveTrue(String userType);
+    
     boolean existsByIsActiveTrue();
     
     boolean existsByNameAndIsActiveTrueAndIdNot(String name, Long id);
