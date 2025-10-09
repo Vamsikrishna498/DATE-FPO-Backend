@@ -392,10 +392,10 @@ public class FPOController {
             // Create FPOMember record linking employee to FPO
             FPOMember fpoMember = FPOMember.builder()
                 .fpo(fpo)
-                .fpoUser(savedFpoUser)
                 .memberType(FPOMember.MemberType.EMPLOYEE)
                 .status(FPOMember.MemberStatus.ACTIVE)
                 .build();
+            fpoMember.setFpoUser(savedFpoUser);
             
             FPOMember savedMember = fpoMemberRepository.save(fpoMember);
             
