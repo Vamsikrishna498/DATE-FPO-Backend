@@ -357,7 +357,7 @@ public class FPOController {
 
     // FPO-specific Employee Management
     @PostMapping("/{fpoId}/employees")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<Map<String, Object>> createFPOEmployee(@PathVariable Long fpoId, @RequestBody Map<String, Object> employeeData) {
         try {
             log.info("Creating FPO-specific employee for FPO ID: {}", fpoId);
@@ -392,6 +392,7 @@ public class FPOController {
             // Create FPOMember record linking employee to FPO
             FPOMember fpoMember = FPOMember.builder()
                 .fpo(fpo)
+                .fpoUser(savedFpoUser)
                 .memberType(FPOMember.MemberType.EMPLOYEE)
                 .status(FPOMember.MemberStatus.ACTIVE)
                 .build();
