@@ -210,7 +210,7 @@ public class FPOController {
 
     // FPO KYC Management Endpoints
     @PutMapping("/kyc/approve/{farmerId}")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<String> approveKyc(@PathVariable Long farmerId, Authentication authentication) {
         try {
             String fpoUserEmail = authentication.getName();
@@ -224,7 +224,7 @@ public class FPOController {
     }
 
     @PutMapping("/kyc/reject/{farmerId}")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<String> rejectKyc(@PathVariable Long farmerId, 
                                           @RequestBody Map<String, String> request,
                                           Authentication authentication) {
@@ -244,7 +244,7 @@ public class FPOController {
     }
 
     @PutMapping("/kyc/refer-back/{farmerId}")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<String> referBackKyc(@PathVariable Long farmerId, 
                                              @RequestBody Map<String, String> request,
                                              Authentication authentication) {

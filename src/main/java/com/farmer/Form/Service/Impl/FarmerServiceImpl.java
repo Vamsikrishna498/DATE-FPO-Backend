@@ -335,6 +335,23 @@ public class FarmerServiceImpl implements FarmerService {
             farmer.setCurrentSoilTest(updatedFarmer.getCurrentSoilTest());
         }
         
+        // Handle assignedEmployee field carefully to avoid foreign key constraint violations
+        if (updatedFarmer.getAssignedEmployee() != null) {
+            // Verify the employee exists before assigning
+            try {
+                Employee employee = employeeRepository.findById(updatedFarmer.getAssignedEmployee().getId()).orElse(null);
+                if (employee != null) {
+                    farmer.setAssignedEmployee(employee);
+                    System.out.println("✅ Assigned farmer to employee: " + employee.getEmail());
+                } else {
+                    System.out.println("⚠️ Employee not found, keeping existing assignment: " + farmer.getAssignedEmployee());
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error handling assignedEmployee: " + e.getMessage());
+                // Keep existing assignment if there's an error
+            }
+        }
+        
         // Ensure required fields have default values if they're null/empty
         if (farmer.getSalutation() == null || farmer.getSalutation().trim().isEmpty()) {
             farmer.setSalutation("Mr"); // Default value
@@ -352,7 +369,42 @@ public class FarmerServiceImpl implements FarmerService {
             farmer.setCountry("India"); // Default value
         }
         
-        return farmerRepository.save(farmer);
+        // Clear invalid pattern fields to avoid validation errors
+        if (farmer.getAlternativeContactNumber() != null && 
+            !farmer.getAlternativeContactNumber().matches("^\\d{10}$")) {
+            System.out.println("⚠️ Clearing invalid alternative contact number: " + farmer.getAlternativeContactNumber());
+            farmer.setAlternativeContactNumber(null);
+        }
+        
+        if (farmer.getPincode() != null && 
+            !farmer.getPincode().matches("^\\d{6}$")) {
+            System.out.println("⚠️ Clearing invalid pincode: " + farmer.getPincode());
+            farmer.setPincode(null);
+        }
+        
+        try {
+            return farmerRepository.save(farmer);
+        } catch (Exception e) {
+            System.err.println("❌ FarmerService: Database save error: " + e.getMessage());
+            System.err.println("❌ Error type: " + e.getClass().getSimpleName());
+            
+            // Handle specific constraint violations
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("constraint") || e.getMessage().contains("validation")) {
+                    throw new RuntimeException("Validation error: " + e.getMessage(), e);
+                }
+                if (e.getMessage().contains("foreign key") || e.getMessage().contains("FK_")) {
+                    throw new RuntimeException("Foreign key constraint violation: " + e.getMessage(), e);
+                }
+                if (e.getMessage().contains("unique") || e.getMessage().contains("duplicate")) {
+                    throw new RuntimeException("Duplicate data error: " + e.getMessage(), e);
+                }
+            }
+            
+            // Log the full exception for debugging
+            e.printStackTrace();
+            throw new RuntimeException("Database error while saving farmer: " + e.getMessage(), e);
+        }
     }
 
     @Override
