@@ -165,7 +165,7 @@ public class AdminController {
             System.out.println("🔍 AdminController: Updating farmer with ID: " + id);
             System.out.println("🔍 AdminController: Farmer data received: " + farmer);
             
-            // Validate required fields before processing
+            // Validate and fix data before processing
             if (farmer.getSalutation() != null && farmer.getSalutation().trim().isEmpty()) {
                 farmer.setSalutation("Mr");
             }
@@ -180,6 +180,31 @@ public class AdminController {
             }
             if (farmer.getCountry() != null && farmer.getCountry().trim().isEmpty()) {
                 farmer.setCountry("India");
+            }
+            
+            // Validate pattern constraints
+            if (farmer.getAlternativeContactNumber() != null && !farmer.getAlternativeContactNumber().isEmpty()) {
+                if (!farmer.getAlternativeContactNumber().matches("^\\d{10}$")) {
+                    System.err.println("❌ Invalid alternative contact number format: " + farmer.getAlternativeContactNumber());
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Validation Error",
+                        "message", "Alternative contact number must be exactly 10 digits",
+                        "field", "alternativeContactNumber",
+                        "value", farmer.getAlternativeContactNumber()
+                    ));
+                }
+            }
+            
+            if (farmer.getPincode() != null && !farmer.getPincode().isEmpty()) {
+                if (!farmer.getPincode().matches("^\\d{6}$")) {
+                    System.err.println("❌ Invalid pincode format: " + farmer.getPincode());
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Validation Error",
+                        "message", "Pincode must be exactly 6 digits",
+                        "field", "pincode",
+                        "value", farmer.getPincode()
+                    ));
+                }
             }
             
             Farmer updatedFarmer = farmerService.updateFarmerBySuperAdmin(id, farmer);

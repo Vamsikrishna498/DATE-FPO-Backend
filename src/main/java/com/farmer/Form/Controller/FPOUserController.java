@@ -65,7 +65,7 @@ public class FPOUserController {
 
     @PostMapping
     @Transactional
-    @PreAuthorize("hasRole('FPO') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('FPO') or hasRole('ADMIN') or hasRole('SUPER_ADMIN') or hasRole('EMPLOYEE')")
     public ResponseEntity<?> create(@PathVariable Long fpoId, @Valid @RequestBody CreateUserRequest req) {
         System.out.println("🔄 FPOUserController.create() called with fpoId: " + fpoId);
         System.out.println("📋 Create request: " + req.email() + ", " + req.firstName() + " " + req.lastName() + ", " + req.role());

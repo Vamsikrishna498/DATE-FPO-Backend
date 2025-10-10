@@ -210,7 +210,7 @@ public class FPOController {
 
     // FPO KYC Management Endpoints
     @PutMapping("/kyc/approve/{farmerId}")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<String> approveKyc(@PathVariable Long farmerId, Authentication authentication) {
         try {
             String fpoUserEmail = authentication.getName();
@@ -224,7 +224,7 @@ public class FPOController {
     }
 
     @PutMapping("/kyc/reject/{farmerId}")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<String> rejectKyc(@PathVariable Long farmerId, 
                                           @RequestBody Map<String, String> request,
                                           Authentication authentication) {
@@ -244,7 +244,7 @@ public class FPOController {
     }
 
     @PutMapping("/kyc/refer-back/{farmerId}")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<String> referBackKyc(@PathVariable Long farmerId, 
                                              @RequestBody Map<String, String> request,
                                              Authentication authentication) {
@@ -357,7 +357,7 @@ public class FPOController {
 
     // FPO-specific Employee Management
     @PostMapping("/{fpoId}/employees")
-    @PreAuthorize("hasRole('FPO')")
+    @PreAuthorize("hasRole('FPO') or hasRole('EMPLOYEE')")
     public ResponseEntity<Map<String, Object>> createFPOEmployee(@PathVariable Long fpoId, @RequestBody Map<String, Object> employeeData) {
         try {
             log.info("Creating FPO-specific employee for FPO ID: {}", fpoId);
@@ -395,6 +395,7 @@ public class FPOController {
                 .memberType(FPOMember.MemberType.EMPLOYEE)
                 .status(FPOMember.MemberStatus.ACTIVE)
                 .build();
+            fpoMember.setFpoUser(savedFpoUser);
             
             FPOMember savedMember = fpoMemberRepository.save(fpoMember);
             

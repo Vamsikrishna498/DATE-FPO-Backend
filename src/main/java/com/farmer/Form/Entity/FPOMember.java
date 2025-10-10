@@ -32,6 +32,10 @@ public class FPOMember {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fpo_user_id")
+    private FPOUser fpoUser;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MemberType memberType;
