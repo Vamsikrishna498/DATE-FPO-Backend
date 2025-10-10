@@ -61,6 +61,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/public/uploads/**").permitAll()
                 // Allow authentication endpoints (login, otp, etc.)
                 .requestMatchers("/api/auth/**").permitAll()
+                // Allow branding/logo endpoints (needed before login)
+                .requestMatchers("/api/companies/branding/**").permitAll()
+                // Allow configuration endpoints (public reference data)
+                .requestMatchers("/api/config/**").permitAll()
                 // Any explicitly whitelisted dashboards/data
                 .requestMatchers(SUPER_ADMIN_DASHBOARD).permitAll()
                 .requestMatchers(ADMIN_FARMERS_KYC).permitAll()
